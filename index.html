@@ -45,7 +45,7 @@ header{background:linear-gradient(180deg,var(--rail-light),var(--rail));
   width:34px;height:34px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 
 nav{display:flex;background:var(--rail);border-bottom:1px solid rgba(0,0,0,.4);}
-nav button{flex:1;background:none;border:none;color:var(--bone-dim);padding:11px 2px;font-size:11.5px;
+nav button{flex:1;background:none;border:none;color:var(--bone-dim);padding:11px 1px;font-size:10.5px;letter-spacing:.3px;
   font-weight:600;letter-spacing:1px;text-transform:uppercase;cursor:pointer;
   border-bottom:3px solid transparent;transition:.2s;}
 nav button.active{color:var(--brass-bright);border-bottom-color:var(--brass);background:rgba(201,162,75,.08);}
@@ -358,6 +358,61 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
 .dock-spin:disabled{opacity:.5;}
 /* spacer so the paytable isn't hidden behind the fixed dock */
 .slot-spacer{height:84px;}
+/* ===== ROULETTE ===== */
+.roulette-top{display:flex;gap:12px;align-items:center;margin:8px 0 12px;}
+.wheel-wrap{position:relative;width:170px;height:170px;flex-shrink:0;margin:0 auto;}
+.wheel-svg{width:170px;height:170px;display:block;border-radius:50%;
+  box-shadow:0 0 0 5px #3a2418,0 0 0 8px var(--brass),0 6px 20px rgba(0,0,0,.6);}
+.wheel-svg.spinning{animation:wheelTurn 7s cubic-bezier(.2,.55,.3,1) forwards;}
+@keyframes wheelTurn{from{transform:rotate(0);}to{transform:rotate(1440deg);}}
+.ball-track{position:absolute;inset:0;pointer-events:none;}
+.ball-track.spinning{animation:ballTurn 7s cubic-bezier(.15,.6,.25,1) forwards;}
+@keyframes ballTurn{from{transform:rotate(0);}to{transform:rotate(-2880deg);}}
+.ball{position:absolute;top:7px;left:50%;width:11px;height:11px;border-radius:50%;margin-left:-5.5px;
+  background:radial-gradient(circle at 35% 30%,#fff,#ccc);box-shadow:0 0 6px rgba(255,255,255,.8);}
+.wheel-center{position:absolute;top:50%;left:50%;width:62px;height:62px;transform:translate(-50%,-50%);
+  border-radius:50%;background:radial-gradient(circle,#2a1810,#0d0704);border:3px solid var(--brass);
+  display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 12px rgba(0,0,0,.8);}
+.wc-num{font-family:Georgia,serif;font-size:26px;font-weight:700;color:#fff;}
+.roulette-side{flex:1;min-width:0;}
+.rl-readout{font-family:Georgia,serif;font-size:15px;color:var(--bone);min-height:40px;line-height:1.3;margin-bottom:8px;}
+.rl-readout.win{color:var(--win);}.rl-readout.lose{color:var(--lose);}
+.recent-spins{display:flex;gap:4px;flex-wrap:wrap;}
+.recent-spins .rs{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;color:#fff;font-family:system-ui;box-shadow:0 1px 3px rgba(0,0,0,.4);}
+.rs.red{background:#c0392b;}.rs.black{background:#222;}.rs.green{background:#1d7d46;}
+
+.rl-betbar{margin-bottom:8px;}
+.rl-chiprow{display:flex;gap:7px;justify-content:center;}
+.rl-chiprow .chip{width:44px;height:44px;font-size:11px;}
+.rl-total{text-align:center;font-size:12px;color:var(--bone-dim);margin-top:6px;}
+.rl-total b{color:var(--brass-bright);font-family:Georgia,serif;font-size:15px;}
+
+/* betting board */
+.rl-board{display:flex;flex-direction:column;gap:4px;}
+.rl-zero{background:#1d7d46;color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:6px;
+  text-align:center;padding:8px;font-weight:700;font-family:Georgia,serif;font-size:16px;cursor:pointer;position:relative;}
+.rl-numgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;}
+.rl-num{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:5px;
+  font-size:14px;font-weight:700;color:#fff;cursor:pointer;font-family:Georgia,serif;position:relative;
+  border:1px solid rgba(255,255,255,.18);user-select:none;}
+.rl-num.red{background:#c0392b;}.rl-num.black{background:#222;}
+.rl-num:active,.rl-cell:active,.rl-zero:active{transform:scale(.95);}
+.rl-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;}
+.rl-dozens{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;}
+.rl-outside{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;}
+.rl-cell{background:rgba(0,0,0,.3);border:1px solid var(--felt-line);border-radius:5px;text-align:center;
+  padding:9px 2px;font-size:11px;font-weight:700;color:var(--bone);cursor:pointer;font-family:system-ui;
+  position:relative;display:flex;align-items:center;justify-content:center;user-select:none;}
+.rl-cell.red{background:#c0392b;color:#fff;border-color:rgba(255,255,255,.25);}
+.rl-cell.black{background:#222;color:#fff;border-color:rgba(255,255,255,.25);}
+.rl-cell.col21{font-size:12px;}
+/* stake chip marker on any bet cell */
+.rl-stake{position:absolute;top:-7px;right:-5px;background:var(--brass-bright);color:var(--ink);
+  font-size:10px;font-weight:700;border-radius:9px;padding:1px 5px;box-shadow:0 1px 4px rgba(0,0,0,.5);
+  font-family:system-ui;z-index:2;}
+.rl-num.hot{outline:3px solid var(--brass-bright);outline-offset:-2px;z-index:3;box-shadow:0 0 14px var(--brass-bright);}
+.rl-cell.hot,.rl-zero.hot{outline:3px solid var(--brass-bright);outline-offset:-2px;box-shadow:0 0 14px var(--brass-bright);}
 </style>
 </head>
 <body>
@@ -398,6 +453,7 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
   <button data-g="blackjack">Blackjack</button>
   <button data-g="poker">Vid Poker</button>
   <button data-g="slots">Slots</button>
+  <button data-g="roulette">Roulette</button>
 </nav>
 
 <main>
@@ -541,13 +597,87 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
         <div class="chip" data-v="100">100</div>
         <div class="chip" data-v="500">500</div>
       </div>
+
+      <div class="btn-row" style="margin-top:12px;">
+        <button class="btn danger" id="slotMaxInline">Max Bet</button>
+        <button class="btn" id="slotSpinInline" style="min-width:120px;">SPIN</button>
+      </div>
     </div>
 
     <div class="paytable" id="slotPay"><div class="pt-h">Payouts (3 in a line, × total-bet share)</div></div>
     <div class="hint">Each symbol pays for 3 matching on an active payline. Cherries also pay for 2. More lines = more ways to hit. Max Bet plays all 5 lines at the top chip.</div>
     <div class="slot-spacer"></div>
   </section>
+
+  <!-- ============ ROULETTE ============ -->
+  <section class="screen" id="roulette">
+    <div class="roulette-top">
+      <div class="wheel-wrap">
+        <svg id="wheelSvg" viewBox="0 0 200 200" class="wheel-svg"></svg>
+        <div class="ball-track" id="ballTrack"><div class="ball" id="ball"></div></div>
+        <div class="wheel-center"><div class="wc-num" id="lastNumber">—</div></div>
+      </div>
+      <div class="roulette-side">
+        <div class="rl-readout" id="rlMsg">Place bets, then spin.</div>
+        <div class="recent-spins" id="recentSpins"></div>
+      </div>
+    </div>
+
+    <div class="rl-betbar">
+      <div class="rl-chiprow" id="rlChips">
+        <div class="chip sel" data-v="5">5</div>
+        <div class="chip" data-v="25">25</div>
+        <div class="chip" data-v="100">100</div>
+        <div class="chip" data-v="500">500</div>
+        <div class="chip clear" id="rlClear">CLEAR</div>
+      </div>
+      <div class="rl-total">Total bet: <b id="rlTotal">$0</b></div>
+    </div>
+
+    <div class="rl-board" id="rlBoard">
+      <!-- zero -->
+      <div class="rl-zero" data-bet="straight" data-n="0">0</div>
+      <!-- number grid 1-36 -->
+      <div class="rl-numgrid" id="rlNumGrid"></div>
+      <!-- column 2:1 bets -->
+      <div class="rl-cols">
+        <div class="rl-cell col21" data-bet="column" data-col="3">2:1</div>
+        <div class="rl-cell col21" data-bet="column" data-col="2">2:1</div>
+        <div class="rl-cell col21" data-bet="column" data-col="1">2:1</div>
+      </div>
+      <!-- dozens -->
+      <div class="rl-dozens">
+        <div class="rl-cell" data-bet="dozen" data-d="1">1st 12</div>
+        <div class="rl-cell" data-bet="dozen" data-d="2">2nd 12</div>
+        <div class="rl-cell" data-bet="dozen" data-d="3">3rd 12</div>
+      </div>
+      <!-- even-money outside bets -->
+      <div class="rl-outside">
+        <div class="rl-cell" data-bet="low">1–18</div>
+        <div class="rl-cell" data-bet="even">EVEN</div>
+        <div class="rl-cell red" data-bet="red">RED</div>
+        <div class="rl-cell black" data-bet="black">BLACK</div>
+        <div class="rl-cell" data-bet="odd">ODD</div>
+        <div class="rl-cell" data-bet="high">19–36</div>
+      </div>
+    </div>
+
+    <div class="btn-row" style="margin-top:12px;">
+      <button class="btn secondary" id="rlClearInline">Clear</button>
+      <button class="btn" id="rlSpinInline" style="min-width:120px;">SPIN</button>
+    </div>
+
+    <div class="hint">Straight number pays 35:1. Dozens &amp; columns 2:1. Red/Black, Even/Odd, 1–18/19–36 pay even money. European single-zero wheel. Tap a chip value, then tap the board to stack bets.</div>
+    <div class="slot-spacer"></div>
+  </section>
 </main>
+
+<!-- Fixed Spin bar for roulette -->
+<div id="rlDock" class="slot-dock" style="display:none;">
+  <button class="btn danger" id="rlClearDock">Clear</button>
+  <div class="dock-total"><span class="dt-lbl">Bet</span><span class="dt-val" id="rlDockTotal">$0</span></div>
+  <button class="btn dock-spin" id="rlSpin">SPIN</button>
+</div>
 
 <!-- Fixed Spin bar (only visible on the Slots tab) -->
 <div id="slotDock" class="slot-dock" style="display:none;">
@@ -584,6 +714,12 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
       <div class="luck-head"><span class="lg serif">🍒 Slots Luck</span><span class="lv" id="luckSlotsVal">5</span></div>
       <div class="luck-desc" id="luckSlotsDesc"></div>
       <input type="range" min="0" max="10" value="5" id="luckSlots">
+      <div class="scale-marks"><span>0</span><span>5 fair</span><span>10</span></div>
+    </div>
+    <div class="luck-block">
+      <div class="luck-head"><span class="lg serif">🎡 Roulette Luck</span><span class="lv" id="luckRouletteVal">5</span></div>
+      <div class="luck-desc" id="luckRouletteDesc"></div>
+      <input type="range" min="0" max="10" value="5" id="luckRoulette">
       <div class="scale-marks"><span>0</span><span>5 fair</span><span>10</span></div>
     </div>
 
@@ -633,7 +769,7 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
 const SAVE_KEY='feltbone_v2';
 let S={
   bank:1000, casino:4000000000000,
-  luckOn:true, luck:{craps:5,blackjack:5,poker:5,slots:5},
+  luckOn:true, luck:{craps:5,blackjack:5,poker:5,slots:5,roulette:5},
   animOn:true, soundOn:true,
   dealersBusted:0, wonFromHouse:0,
   dealerIdx:0, dealerWinsVsYou:0
@@ -770,6 +906,8 @@ document.querySelectorAll('nav button').forEach(b=>{
     b.classList.add('active');document.getElementById(b.dataset.g).classList.add('active');
     const dock=document.getElementById('slotDock');
     if(dock) dock.style.display = (b.dataset.g==='slots') ? 'flex' : 'none';
+    const rdock=document.getElementById('rlDock');
+    if(rdock) rdock.style.display = (b.dataset.g==='roulette') ? 'flex' : 'none';
   };
 });
 const settingsEl=document.getElementById('settings');
@@ -801,6 +939,7 @@ bindLuck('luckCraps','craps','luckCrapsVal','luckCrapsDesc');
 bindLuck('luckBj','blackjack','luckBjVal','luckBjDesc');
 bindLuck('luckPk','poker','luckPkVal','luckPkDesc');
 bindLuck('luckSlots','slots','luckSlotsVal','luckSlotsDesc');
+bindLuck('luckRoulette','roulette','luckRouletteVal','luckRouletteDesc');
 
 const luckToggle=document.getElementById('luckToggle');
 function syncToggle(){luckToggle.classList.toggle('on',S.luckOn);}
@@ -835,7 +974,7 @@ document.getElementById('installFromSettings').onclick=()=>{
 };
 document.getElementById('resetAll').onclick=()=>{
   if(confirm('Reset bankrolls, luck, and dealers to default?')){
-    S={bank:1000,casino:4000000000000,luckOn:true,luck:{craps:5,blackjack:5,poker:5,slots:5},animOn:true,soundOn:true,
+    S={bank:1000,casino:4000000000000,luckOn:true,luck:{craps:5,blackjack:5,poker:5,slots:5,roulette:5},animOn:true,soundOn:true,
        dealersBusted:0,wonFromHouse:0,dealerIdx:0,dealerWinsVsYou:0};
     save();location.reload();
   }
@@ -1610,13 +1749,15 @@ document.querySelectorAll('#slotChips .chip[data-v]').forEach(c=>{
   c.onclick=()=>{if(slot.spinning)return;slot.perLine=+c.dataset.v;SFX.chip();
     document.querySelectorAll('#slotChips .chip').forEach(x=>x.classList.remove('sel'));c.classList.add('sel');updateSlotBet();};
 });
-document.getElementById('slotMax').onclick=()=>{
+function doSlotMax(){
   if(slot.spinning)return;
   slot.lines=5;slot.perLine=500;
   document.querySelectorAll('#lineSelect button').forEach(x=>x.classList.toggle('sel',x.dataset.lines==='5'));
   document.querySelectorAll('#slotChips .chip').forEach(x=>x.classList.toggle('sel',x.dataset.v==='500'));
-  updateSlotBet();slotMsg('Max bet — 5 lines at $500.');
-};
+  updateSlotBet();slotMsg('Max bet — 5 lines at $500.');SFX.chip();
+}
+const _slotMaxBtn=document.getElementById('slotMax');if(_slotMaxBtn)_slotMaxBtn.onclick=doSlotMax;
+const _slotMaxInline=document.getElementById('slotMaxInline');if(_slotMaxInline)_slotMaxInline.onclick=doSlotMax;
 function slotMsg(t,c){const m=document.getElementById('slotMsg');m.textContent=t;m.className='slot-readout'+(c?' '+c:'');}
 
 // render a strip with given visible 3 symbols (plus padding above/below for spin illusion)
@@ -1717,7 +1858,7 @@ async function slotSpin(){
   takeStake(cost);                // stake leaves bank
   clearWinCells();
   slot.spinning=true;
-  document.getElementById('slotSpin').disabled=true;document.getElementById('slotMax').disabled=true;
+  setSlotButtonsDisabled(true);
   const grid=spinGrid();
   slot.grid=grid;
 
@@ -1756,13 +1897,241 @@ async function slotSpin(){
     slotMsg('No win — spin again.','lose');SFX.lose();
   }
   slot.spinning=false;
-  document.getElementById('slotSpin').disabled=false;document.getElementById('slotMax').disabled=false;
+  setSlotButtonsDisabled(false);
+}
+function setSlotButtonsDisabled(d){
+  ['slotSpin','slotMax','slotSpinInline','slotMaxInline'].forEach(id=>{
+    const e=document.getElementById(id);if(e)e.disabled=d;
+  });
 }
 function slotLabel(k){const s=SYM_BY_K[k];return (s.label||k.charAt(0).toUpperCase()+k.slice(1));}
-document.getElementById('slotSpin').onclick=slotSpin;
+const _slotSpinBtn=document.getElementById('slotSpin');if(_slotSpinBtn)_slotSpinBtn.onclick=slotSpin;
+const _slotSpinInline=document.getElementById('slotSpinInline');if(_slotSpinInline)_slotSpinInline.onclick=slotSpin;
 
 // init slots display
 blankStrips();updateSlotBet();
+
+/* ============================================================
+   ROULETTE — European single-zero (0-36), 7s spin, luck-aware
+   ============================================================ */
+// European wheel order (clockwise)
+const WHEEL_ORDER=[0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
+const RED_NUMBERS=new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
+function numColor(n){return n===0?'green':(RED_NUMBERS.has(n)?'red':'black');}
+const rl={chip:5, bets:{}, spinning:false, history:[]};
+// bets keyed by a string id; value = {amount, type, ...selector, cells:[elements]}
+// We store amounts in rl.bets[id]={amount,type,sel}
+
+function rlMsg(t,c){const m=document.getElementById('rlMsg');m.textContent=t;m.className='rl-readout'+(c?' '+c:'');}
+
+// ---- build the number grid (1-36) in 3 rows x 12 cols, displayed as 6-col mobile grid ----
+(function buildNumGrid(){
+  const g=document.getElementById('rlNumGrid');
+  // Standard layout columns: top row 3,6,9...; but for mobile 6-wide we just go 1..36 in order,
+  // colored correctly. Column bet uses n%3.
+  for(let n=1;n<=36;n++){
+    const d=document.createElement('div');
+    d.className='rl-num '+numColor(n);
+    d.dataset.bet='straight';d.dataset.n=n;d.textContent=n;
+    g.appendChild(d);
+  }
+})();
+
+// ---- build the wheel SVG ----
+(function buildWheel(){
+  const svg=document.getElementById('wheelSvg');
+  const cx=100,cy=100,rOuter=100,rInner=64;
+  const seg=360/WHEEL_ORDER.length;
+  let html='';
+  WHEEL_ORDER.forEach((n,i)=>{
+    const a0=(i*seg-90)*Math.PI/180, a1=((i+1)*seg-90)*Math.PI/180;
+    const x0=cx+rOuter*Math.cos(a0),y0=cy+rOuter*Math.sin(a0);
+    const x1=cx+rOuter*Math.cos(a1),y1=cy+rOuter*Math.sin(a1);
+    const xi1=cx+rInner*Math.cos(a1),yi1=cy+rInner*Math.sin(a1);
+    const xi0=cx+rInner*Math.cos(a0),yi0=cy+rInner*Math.sin(a0);
+    const col=numColor(n)==='green'?'#1d7d46':(numColor(n)==='red'?'#c0392b':'#1a1a1a');
+    html+=`<path d="M${x0} ${y0} A${rOuter} ${rOuter} 0 0 1 ${x1} ${y1} L${xi1} ${yi1} A${rInner} ${rInner} 0 0 0 ${xi0} ${yi0} Z" fill="${col}" stroke="#0a0a0a" stroke-width="0.5"/>`;
+    // number text
+    const am=((i+0.5)*seg-90)*Math.PI/180;const tr=(rOuter+rInner)/2;
+    const tx=cx+tr*Math.cos(am),ty=cy+tr*Math.sin(am);
+    html+=`<text x="${tx}" y="${ty}" fill="#fff" font-size="7" font-family="Georgia,serif" text-anchor="middle" dominant-baseline="central" transform="rotate(${(i+0.5)*seg},${tx},${ty})">${n}</text>`;
+  });
+  svg.innerHTML=html;
+})();
+
+// ---- chip selection ----
+document.querySelectorAll('#rlChips .chip[data-v]').forEach(c=>{
+  c.onclick=()=>{rl.chip=+c.dataset.v;document.querySelectorAll('#rlChips .chip[data-v]').forEach(x=>x.classList.remove('sel'));c.classList.add('sel');SFX.click();};
+});
+
+// ---- bet id + element resolution ----
+function betId(el){
+  const t=el.dataset.bet;
+  if(t==='straight')return 'straight_'+el.dataset.n;
+  if(t==='column')return 'column_'+el.dataset.col;
+  if(t==='dozen')return 'dozen_'+el.dataset.d;
+  return t; // red/black/even/odd/low/high
+}
+function rlTotalBet(){let s=0;for(const k in rl.bets)s+=rl.bets[k].amount;return s;}
+function updateRlTotal(){const t=rlTotalBet();document.getElementById('rlTotal').textContent=fmt(t);
+  const d=document.getElementById('rlDockTotal');if(d)d.textContent=fmt(t);}
+
+// place a bet on any board cell
+document.querySelectorAll('#rlBoard [data-bet]').forEach(el=>{
+  el.onclick=()=>{
+    if(rl.spinning)return;
+    if(S.bank<rl.chip){rlMsg('Not enough bankroll for that chip.','lose');return;}
+    const id=betId(el);
+    if(!rl.bets[id])rl.bets[id]={amount:0,el,type:el.dataset.bet,sel:{n:el.dataset.n,col:el.dataset.col,d:el.dataset.d}};
+    rl.bets[id].amount+=rl.chip;takeStake(rl.chip);SFX.chip();
+    renderRlStakes();updateRlTotal();
+  };
+});
+function renderRlStakes(){
+  // clear existing markers
+  document.querySelectorAll('#rlBoard .rl-stake').forEach(e=>e.remove());
+  document.querySelectorAll('#rlBoard .hot').forEach(e=>e.classList.remove('hot'));
+  for(const k in rl.bets){
+    const b=rl.bets[k];if(b.amount<=0)continue;
+    const chip=document.createElement('div');chip.className='rl-stake';chip.textContent=b.amount;
+    b.el.appendChild(chip);
+  }
+}
+function rlClearAll(){
+  if(rl.spinning)return;
+  let refund=0;for(const k in rl.bets){refund+=rl.bets[k].amount;}rl.bets={};
+  if(refund>0){returnStake(refund);SFX.chip();}
+  renderRlStakes();updateRlTotal();rlMsg(refund?('Cleared — '+fmt(refund)+' back.'):'Nothing to clear.');
+}
+document.getElementById('rlClear').onclick=rlClearAll;
+document.getElementById('rlClearDock').onclick=rlClearAll;
+const _rlClearInline=document.getElementById('rlClearInline');if(_rlClearInline)_rlClearInline.onclick=rlClearAll;
+
+// ---- does a winning number satisfy a given bet? returns payout multiple (profit:1) or 0 ----
+function betPayout(b,n){
+  const col=numColor(n);
+  switch(b.type){
+    case 'straight': return (+b.sel.n===n)?35:0;
+    case 'red': return col==='red'?1:0;
+    case 'black': return col==='black'?1:0;
+    case 'even': return (n!==0&&n%2===0)?1:0;
+    case 'odd': return (n%2===1)?1:0;
+    case 'low': return (n>=1&&n<=18)?1:0;
+    case 'high': return (n>=19&&n<=36)?1:0;
+    case 'dozen': {const d=+b.sel.d; if(n===0)return 0; return (Math.ceil(n/12)===d)?2:0;}
+    case 'column': {const c=+b.sel.col; if(n===0)return 0; return ((n-1)%3===(c-1))?2:0;}
+  }
+  return 0;
+}
+function anyBetWinsOn(n){for(const k in rl.bets){if(betPayout(rl.bets[k],n)>0)return true;}return false;}
+
+// ---- luck-aware outcome selection ----
+function pickOutcome(){
+  const fav=favorRoll('roulette'); // {active, favor}
+  let n=Math.floor(Math.random()*37);
+  if(!fav.active||rlTotalBet()===0) return n;
+  // try up to N random draws to find a number that wins (favor) or loses (unfavor) for the player
+  for(let i=0;i<80;i++){
+    const cand=Math.floor(Math.random()*37);
+    const wins=anyBetWinsOn(cand);
+    if(fav.favor && wins) return cand;
+    if(!fav.favor && !wins) return cand;
+  }
+  return n;
+}
+
+// ---- recent spins history ----
+function pushHistory(n){
+  rl.history.unshift(n);if(rl.history.length>10)rl.history.pop();
+  const el=document.getElementById('recentSpins');el.innerHTML='';
+  rl.history.forEach(x=>{const d=document.createElement('div');d.className='rs '+numColor(x);d.textContent=x;el.appendChild(d);});
+}
+
+// ---- the spin ----
+async function rlDoSpin(){
+  if(rl.spinning)return;
+  if(rlTotalBet()===0){rlMsg('Place at least one bet first.','lose');return;}
+  rl.spinning=true;
+  setRlSpinDisabled(true);
+  const n=pickOutcome();
+  const svg=document.getElementById('wheelSvg'),track=document.getElementById('ballTrack');
+  const idx=WHEEL_ORDER.indexOf(n);
+  const seg=360/WHEEL_ORDER.length;
+  // final ball angle so it lands on the winning pocket (ball spins opposite the wheel)
+  const landAngle = -(idx*seg) ; // degrees, where the ball should visually rest relative to top
+
+  if(S.animOn){
+    rlMsg('No more bets — ball is rolling…');
+    SFX.diceRoll();
+    // set CSS custom end transforms then trigger
+    svg.style.animation='none';track.style.animation='none';void svg.offsetWidth;
+    // wheel spins clockwise 4 turns; ball spins counter and lands on pocket
+    svg.style.transform='';track.style.transform='';
+    svg.classList.add('spinning');
+    // build a custom ball keyframe to land precisely
+    track.style.setProperty('--ball-end',(landAngle - 2880)+'deg');
+    track.animate([{transform:'rotate(0deg)'},{transform:'rotate('+(landAngle-2880)+'deg)'}],
+      {duration:7000,easing:'cubic-bezier(.15,.6,.25,1)',fill:'forwards'});
+    svg.animate([{transform:'rotate(0deg)'},{transform:'rotate(1440deg)'}],
+      {duration:7000,easing:'cubic-bezier(.2,.55,.3,1)',fill:'forwards'});
+    // ticking sounds as it slows
+    for(let i=0;i<10;i++)setTimeout(()=>SFX.reelStop(),1500+i*500*(i/9));
+    await wait(7000);
+    svg.classList.remove('spinning');
+    SFX.diceLand();
+  }
+  rlSettle(n);
+  rl.spinning=false;
+  setRlSpinDisabled(false);
+}
+function setRlSpinDisabled(d){
+  ['rlSpin','rlSpinInline'].forEach(id=>{const e=document.getElementById(id);if(e)e.disabled=d;});
+}
+document.getElementById('rlSpin').onclick=rlDoSpin;
+const _rlSpinInline=document.getElementById('rlSpinInline');if(_rlSpinInline)_rlSpinInline.onclick=rlDoSpin;
+
+function rlSettle(n){
+  document.getElementById('lastNumber').textContent=n;
+  document.getElementById('lastNumber').style.color = numColor(n)==='green'?'#3fd47e':(numColor(n)==='red'?'#ff6b6b':'#fff');
+  pushHistory(n);
+  let credit=0,staked=0,winList=[];
+  for(const k in rl.bets){
+    const b=rl.bets[k];staked+=b.amount;
+    const mult=betPayout(b,n);
+    if(mult>0){const ret=b.amount*(mult+1);credit+=ret;winList.push(betName(b)+' +'+fmt(b.amount*mult));}
+  }
+  // money: stakes already taken on placement
+  if(credit>0){
+    S.bank+=credit;const houseDelta=credit-staked;
+    S.casino-=houseDelta;if(houseDelta>0)S.wonFromHouse+=houseDelta;refreshMoney();
+  }else{ S.casino+=staked;refreshMoney(); }
+  const net=credit-staked;
+  // highlight winning cells
+  renderRlStakes();
+  highlightWinners(n);
+  const colCap=numColor(n).charAt(0).toUpperCase()+numColor(n).slice(1);
+  if(net>0){rlMsg(`${n} ${colCap} — you win! ${winList.slice(0,3).join(', ')}${winList.length>3?'…':''}  Net +${fmt(net)}`,'win');flash('+'+fmt(net),'var(--win)');SFX.win();}
+  else{rlMsg(`${n} ${colCap}. No win this time.  ${fmt(net)}`,'lose');flash(fmt(net),'var(--lose)');SFX.lose();}
+  // bets clear after a spin (you re-place for next)
+  rl.bets={};setTimeout(()=>{document.querySelectorAll('#rlBoard .rl-stake').forEach(e=>e.remove());updateRlTotal();},1800);
+  updateRlTotal();
+}
+function highlightWinners(n){
+  document.querySelectorAll('#rlBoard .hot').forEach(e=>e.classList.remove('hot'));
+  // straight number
+  const numEl=document.querySelector('#rlBoard [data-bet="straight"][data-n="'+n+'"]');
+  if(numEl)numEl.classList.add('hot');
+}
+function betName(b){
+  switch(b.type){
+    case 'straight':return 'Number '+b.sel.n;
+    case 'dozen':return ['','1st 12','2nd 12','3rd 12'][+b.sel.d];
+    case 'column':return 'Column';
+    default:return b.type.charAt(0).toUpperCase()+b.type.slice(1);
+  }
+}
+updateRlTotal();
+
 
 
 /* init */
