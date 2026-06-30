@@ -273,10 +273,52 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
   .dice-wrap{margin:10px 0 12px;}
   .msg{margin-bottom:7px;}
 }
+/* ---- install banner ---- */
+.install-bar{position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));
+  z-index:150;background:linear-gradient(180deg,#1d5a40,#103a2a);border:1.5px solid var(--brass);
+  border-radius:14px;padding:11px 12px;display:flex;align-items:center;justify-content:space-between;
+  gap:10px;box-shadow:0 6px 24px rgba(0,0,0,.55);animation:ibUp .35s ease-out;}
+@keyframes ibUp{from{transform:translateY(20px);opacity:0;}to{transform:none;opacity:1;}}
+.ib-text{display:flex;flex-direction:column;line-height:1.3;min-width:0;}
+.ib-text b{color:var(--brass-bright);font-family:Georgia,serif;font-size:15px;}
+.ib-text span{font-size:11px;color:var(--bone-dim);}
+.ib-actions{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.ib-btn{background:linear-gradient(180deg,var(--brass-bright),var(--brass));color:var(--ink);border:none;
+  border-radius:9px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer;
+  box-shadow:0 2px 0 var(--brass-deep);}
+.ib-btn:active{transform:translateY(1px);}
+.ib-x{background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.15);color:var(--bone-dim);
+  border-radius:8px;width:32px;height:32px;font-size:13px;cursor:pointer;}
+.step-row{display:flex;gap:10px;align-items:flex-start;padding:9px 2px;border-top:1px solid rgba(255,255,255,.08);}
+.step-num{flex-shrink:0;width:24px;height:24px;border-radius:50%;background:var(--brass);color:var(--ink);
+  font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;font-family:system-ui;}
+.step-txt{font-size:13px;line-height:1.45;color:var(--bone);padding-top:2px;}
+.step-txt b{color:var(--brass-bright);}
 </style>
 </head>
 <body>
 <div class="flash" id="flash"></div>
+
+<!-- Install banner (hidden by default; shown when installable & not already installed) -->
+<div id="installBar" class="install-bar" style="display:none;">
+  <div class="ib-text"><b>Install Felt &amp; Bone</b><span id="ibSub">Add it to your home screen as an app</span></div>
+  <div class="ib-actions">
+    <button class="ib-btn" id="installBtn">Install</button>
+    <button class="ib-x" id="installDismiss">✕</button>
+  </div>
+</div>
+
+<!-- Firefox / manual install instructions modal -->
+<div class="modal-bg" id="installHelp">
+  <div class="modal">
+    <h2 class="serif">Add to Home Screen</h2>
+    <div class="sub" id="installHelpIntro"></div>
+    <div id="installSteps"></div>
+    <div class="btn-row" style="margin-top:14px;">
+      <button class="btn modal-close" id="closeInstallHelp" style="flex:1;">Got it</button>
+    </div>
+  </div>
+</div>
 
 <header>
   <div class="brand"><span class="dot"></span><span class="serif">Felt &amp; Bone</span></div>
@@ -449,6 +491,9 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
     </div>
 
     <div class="btn-row" style="margin-top:14px;">
+      <button class="btn secondary" id="installFromSettings">📲 Install App</button>
+    </div>
+    <div class="btn-row" style="margin-top:8px;">
       <button class="btn secondary" id="resetAll">Reset Everything</button>
       <button class="btn modal-close" id="closeSettings" style="flex:1;">Done</button>
     </div>
@@ -564,6 +609,14 @@ function syncSettings(){
   document.getElementById('statDealer').textContent=DEALERS[S.dealerIdx].name.replace('Dealer ','');
   syncToggle();syncAnim();refreshMoney();
 }
+document.getElementById('installFromSettings').onclick=()=>{
+  settingsEl.classList.remove('show');
+  // re-show banner (clears the dismissed flag) and trigger the install flow
+  sessionStorage.removeItem('fb_install_dismissed');
+  const btn=document.getElementById('installBtn');
+  if(btn) btn.click();
+  else if(window._openInstallHelp) window._openInstallHelp();
+};
 document.getElementById('resetAll').onclick=()=>{
   if(confirm('Reset bankrolls, luck, and dealers to default?')){
     S={bank:1000,casino:4000000000000,luckOn:true,luck:{craps:5,blackjack:5,poker:5},animOn:true,
@@ -1221,6 +1274,117 @@ refreshMoney();
 
 /* register service worker for offline PWA */
 if('serviceWorker' in navigator){navigator.serviceWorker.register('service-worker.js').catch(()=>{});}
+
+/* ============================================================
+   INSTALL HELPER
+   - Chrome/Edge/Samsung: capture beforeinstallprompt -> real Install button
+   - Firefox/Safari: no event -> show browser-specific instructions
+   - Already installed (standalone): hide everything
+   ============================================================ */
+(function(){
+  const bar=document.getElementById('installBar');
+  const btn=document.getElementById('installBtn');
+  const dismiss=document.getElementById('installDismiss');
+  const sub=document.getElementById('ibSub');
+  const helpModal=document.getElementById('installHelp');
+  const helpIntro=document.getElementById('installHelpIntro');
+  const stepsEl=document.getElementById('installSteps');
+  const closeHelp=document.getElementById('closeInstallHelp');
+
+  // running as an installed app already?
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+    || window.navigator.standalone===true;
+  if(isStandalone) return; // nothing to show
+
+  // don't nag if dismissed this session
+  if(sessionStorage.getItem('fb_install_dismissed')==='1') {/* still allow via settings later */}
+
+  const ua=navigator.userAgent;
+  const isFirefox=/Firefox|FxiOS/i.test(ua);
+  const isiOS=/iPad|iPhone|iPod/i.test(ua) || (navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  const isSafari=/^((?!chrome|android|crios|fxios).)*safari/i.test(ua) && !isFirefox;
+  const isAndroid=/Android/i.test(ua);
+
+  let deferredPrompt=null;
+
+  // CHROME / CHROMIUM PATH — real install
+  window.addEventListener('beforeinstallprompt',(e)=>{
+    e.preventDefault();
+    deferredPrompt=e;
+    sub.textContent='One tap to install as an app';
+    showBar();
+  });
+  window.addEventListener('appinstalled',()=>{hideBar();deferredPrompt=null;});
+
+  function showBar(){ if(sessionStorage.getItem('fb_install_dismissed')!=='1') bar.style.display='flex'; }
+  function hideBar(){ bar.style.display='none'; }
+
+  dismiss.onclick=()=>{hideBar();sessionStorage.setItem('fb_install_dismissed','1');};
+  closeHelp.onclick=()=>helpModal.classList.remove('show');
+  helpModal.onclick=e=>{if(e.target===helpModal)helpModal.classList.remove('show');};
+
+  function steps(list){
+    stepsEl.innerHTML='';
+    list.forEach((t,i)=>{
+      const r=document.createElement('div');r.className='step-row';
+      r.innerHTML='<div class="step-num">'+(i+1)+'</div><div class="step-txt">'+t+'</div>';
+      stepsEl.appendChild(r);
+    });
+  }
+  function openHelp(){
+    if(isFirefox && isAndroid){
+      helpIntro.innerHTML="Firefox installs apps from its own menu (it can't be done with a button). Here's the one-time install:";
+      steps([
+        'Tap the <b>⋮ menu</b> (three dots, top-right or bottom-right).',
+        'Look for <b>Install</b> — if you see it, tap it and you\'re done (launches like a real app).',
+        'If you only see <b>Add to Home screen</b> / <b>Add shortcut</b>, tap that instead. It still adds the icon, but opens in Firefox.',
+        'For a true standalone app, you can also open this page once in <b>Chrome</b> and tap Install there — it installs the same app and you never need Chrome again.'
+      ]);
+    } else if(isiOS){
+      helpIntro.innerHTML='On iPhone/iPad, install from the Share menu:';
+      steps([
+        'Tap the <b>Share</b> button (square with an up-arrow).',
+        'Scroll down and tap <b>Add to Home Screen</b>.',
+        'Tap <b>Add</b> — it launches fullscreen like an app.'
+      ]);
+    } else if(isAndroid){
+      helpIntro.innerHTML='Install from your browser menu:';
+      steps([
+        'Tap the <b>⋮ menu</b> (top-right).',
+        'Tap <b>Install app</b> or <b>Add to Home screen</b>.',
+        'Confirm — it launches standalone like an app.'
+      ]);
+    } else {
+      helpIntro.innerHTML='Install from your browser:';
+      steps([
+        'Look for an <b>install icon</b> in the address bar (a monitor/⊕ symbol), or open the browser menu.',
+        'Choose <b>Install Felt &amp; Bone</b> / <b>Install app</b>.',
+        'It opens in its own window like a desktop app.'
+      ]);
+    }
+    helpModal.classList.add('show');
+  }
+
+  btn.onclick=async ()=>{
+    if(deferredPrompt){            // Chromium: fire the real prompt
+      deferredPrompt.prompt();
+      try{ await deferredPrompt.userChoice; }catch(e){}
+      deferredPrompt=null; hideBar();
+    } else {                       // Firefox/Safari/etc: show instructions
+      openHelp();
+    }
+  };
+
+  // For browsers with no beforeinstallprompt (Firefox/Safari), show the banner
+  // after a short delay so the button routes to instructions.
+  if(isFirefox || isiOS || isSafari){
+    sub.textContent = isFirefox ? 'Tap to see how (Firefox install)' : 'Tap to see how to add it';
+    setTimeout(showBar, 1500);
+  }
+
+  // expose a manual trigger from Settings (gear) too
+  window._openInstallHelp=openHelp;
+})();
 </script>
 </body>
 </html>
