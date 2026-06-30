@@ -45,7 +45,7 @@ header{background:linear-gradient(180deg,var(--rail-light),var(--rail));
   width:34px;height:34px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 
 nav{display:flex;background:var(--rail);border-bottom:1px solid rgba(0,0,0,.4);}
-nav button{flex:1;background:none;border:none;color:var(--bone-dim);padding:11px 4px;font-size:12px;
+nav button{flex:1;background:none;border:none;color:var(--bone-dim);padding:11px 2px;font-size:11.5px;
   font-weight:600;letter-spacing:1px;text-transform:uppercase;cursor:pointer;
   border-bottom:3px solid transparent;transition:.2s;}
 nav button.active{color:var(--brass-bright);border-bottom-color:var(--brass);background:rgba(201,162,75,.08);}
@@ -294,6 +294,49 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
   font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;font-family:system-ui;}
 .step-txt{font-size:13px;line-height:1.45;color:var(--bone);padding-top:2px;}
 .step-txt b{color:var(--brass-bright);}
+/* ===== CHERRY SLOTS ===== */
+.slot-machine{background:linear-gradient(180deg,#2a1530,#1a0d22);border:3px solid var(--brass);
+  border-radius:18px;padding:14px 12px 12px;margin:6px 0 12px;position:relative;
+  box-shadow:inset 0 0 40px rgba(0,0,0,.5),0 6px 20px rgba(0,0,0,.5);}
+.slot-machine::before{content:"";position:absolute;inset:6px;border:1px solid rgba(201,162,75,.3);border-radius:12px;pointer-events:none;}
+.slot-title{text-align:center;color:var(--brass-bright);font-size:18px;letter-spacing:2px;margin-bottom:10px;
+  text-shadow:0 0 12px rgba(232,200,118,.4);}
+.slot-window{position:relative;background:#000;border-radius:12px;padding:8px;
+  box-shadow:inset 0 0 30px rgba(0,0,0,.8),0 0 0 3px #3a2418;overflow:hidden;}
+.reels{display:flex;gap:8px;height:198px;}
+.reel{flex:1;background:linear-gradient(180deg,#fff,#f0e8d6);border-radius:9px;overflow:hidden;position:relative;
+  box-shadow:inset 0 6px 12px rgba(0,0,0,.25),inset 0 -6px 12px rgba(0,0,0,.25);}
+/* fade top/bottom so only the middle 3 show clearly */
+.reel::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:3;
+  background:linear-gradient(180deg,rgba(0,0,0,.35) 0%,transparent 22%,transparent 78%,rgba(0,0,0,.35) 100%);}
+.reel-strip{display:flex;flex-direction:column;position:absolute;left:0;right:0;top:0;will-change:transform;}
+.symbol{height:66px;display:flex;align-items:center;justify-content:center;font-size:38px;
+  border-bottom:1px solid rgba(0,0,0,.06);user-select:none;}
+.reel-strip.spinning{animation:reelSpin .18s linear infinite;}
+@keyframes reelSpin{from{transform:translateY(0);}to{transform:translateY(-198px);}}
+/* center payline highlight */
+.slot-window .center-line{position:absolute;left:6px;right:6px;top:50%;height:66px;transform:translateY(-50%);
+  border-top:2px solid rgba(232,200,118,.0);border-bottom:2px solid rgba(232,200,118,.0);z-index:2;pointer-events:none;}
+.win-cell{position:absolute;border:3px solid var(--brass-bright);border-radius:8px;z-index:4;pointer-events:none;
+  box-shadow:0 0 14px var(--brass-bright);animation:winFlash .5s ease-in-out 3;}
+@keyframes winFlash{0%,100%{opacity:1;}50%{opacity:.35;}}
+.payline-marker{position:absolute;width:14px;height:14px;border-radius:50%;z-index:5;font-size:10px;
+  display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;}
+.slot-readout{text-align:center;font-family:Georgia,serif;font-size:15px;color:var(--bone);margin-top:10px;
+  min-height:22px;letter-spacing:.3px;}
+.slot-readout.win{color:var(--win);}.slot-readout.lose{color:var(--lose);}
+.slot-controls{margin-top:4px;}
+.slot-ctl-row{display:flex;gap:8px;justify-content:center;margin-bottom:4px;}
+.slot-stat{flex:1;background:rgba(0,0,0,.28);border:1px solid var(--felt-line);border-radius:10px;
+  padding:8px 4px;text-align:center;}
+.slot-stat.big{border-color:var(--brass);}
+.sc-lbl{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--bone-dim);}
+.sc-val{font-family:Georgia,serif;font-size:18px;color:var(--bone);font-variant-numeric:tabular-nums;}
+.sc-val.gold{color:var(--brass-bright);}
+.line-select{display:flex;gap:8px;justify-content:center;margin-top:6px;}
+.line-select button{flex:1;max-width:90px;background:rgba(0,0,0,.28);border:1.5px solid var(--felt-line);
+  color:var(--bone);border-radius:10px;padding:11px 0;font-size:16px;font-weight:700;cursor:pointer;font-family:Georgia,serif;}
+.line-select button.sel{border-color:var(--brass-bright);background:rgba(201,162,75,.15);color:var(--brass-bright);box-shadow:0 0 10px rgba(201,162,75,.2);}
 </style>
 </head>
 <body>
@@ -333,6 +376,7 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
   <button data-g="craps" class="active">Craps</button>
   <button data-g="blackjack">Blackjack</button>
   <button data-g="poker">Vid Poker</button>
+  <button data-g="slots">Slots</button>
 </nav>
 
 <main>
@@ -438,6 +482,54 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
     <div class="paytable" id="pkPay"><div class="pt-h">Payouts (total return per $1)</div></div>
     <div class="hint">Tap cards to hold, then Draw. Pair of Jacks or better pays.</div>
   </section>
+
+  <!-- ============ CHERRY SLOTS ============ -->
+  <section class="screen" id="slots">
+    <div class="slot-machine">
+      <div class="slot-title serif">🍒 Cherry Sevens 🍒</div>
+      <div class="slot-window" id="slotWindow">
+        <div class="payline-marker pl-left" id="plLeft"></div>
+        <div class="payline-marker pl-right" id="plRight"></div>
+        <div class="reels" id="reels">
+          <div class="reel" id="reel0"><div class="reel-strip" id="strip0"></div></div>
+          <div class="reel" id="reel1"><div class="reel-strip" id="strip1"></div></div>
+          <div class="reel" id="reel2"><div class="reel-strip" id="strip2"></div></div>
+        </div>
+      </div>
+      <div class="slot-readout" id="slotMsg">Pick your lines &amp; bet, then spin.</div>
+    </div>
+
+    <div class="slot-controls">
+      <div class="slot-ctl-row">
+        <div class="slot-stat"><div class="sc-lbl">Lines</div><div class="sc-val" id="slLines">5</div></div>
+        <div class="slot-stat"><div class="sc-lbl">Bet / Line</div><div class="sc-val" id="slPerLine">$5</div></div>
+        <div class="slot-stat big"><div class="sc-lbl">Total Bet</div><div class="sc-val gold" id="slTotal">$25</div></div>
+      </div>
+
+      <div class="bet-lbl" style="margin-top:6px;">Lines played</div>
+      <div class="line-select" id="lineSelect">
+        <button data-lines="1">1</button>
+        <button data-lines="3">3</button>
+        <button data-lines="5" class="sel">5</button>
+      </div>
+
+      <div class="bet-lbl" style="margin-top:10px;">Bet per line</div>
+      <div class="chips" id="slotChips">
+        <div class="chip sel" data-v="5">5</div>
+        <div class="chip" data-v="25">25</div>
+        <div class="chip" data-v="100">100</div>
+        <div class="chip" data-v="500">500</div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn danger" id="slotMax">Max Bet</button>
+        <button class="btn" id="slotSpin">Spin</button>
+      </div>
+    </div>
+
+    <div class="paytable" id="slotPay"><div class="pt-h">Payouts (3 in a line, × total-bet share)</div></div>
+    <div class="hint">Each symbol pays for 3 matching on an active payline. Cherries also pay for 2. More lines = more ways to hit. Max Bet plays all 5 lines at the top chip.</div>
+  </section>
 </main>
 
 <!-- ============ SETTINGS MODAL ============ -->
@@ -462,6 +554,12 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
       <div class="luck-head"><span class="lg serif">♠ Video Poker Luck</span><span class="lv" id="luckPkVal">5</span></div>
       <div class="luck-desc" id="luckPkDesc"></div>
       <input type="range" min="0" max="10" value="5" id="luckPk">
+      <div class="scale-marks"><span>0</span><span>5 fair</span><span>10</span></div>
+    </div>
+    <div class="luck-block">
+      <div class="luck-head"><span class="lg serif">🍒 Slots Luck</span><span class="lv" id="luckSlotsVal">5</span></div>
+      <div class="luck-desc" id="luckSlotsDesc"></div>
+      <input type="range" min="0" max="10" value="5" id="luckSlots">
       <div class="scale-marks"><span>0</span><span>5 fair</span><span>10</span></div>
     </div>
 
@@ -507,7 +605,7 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
 const SAVE_KEY='feltbone_v2';
 let S={
   bank:1000, casino:4000000000000,
-  luckOn:true, luck:{craps:5,blackjack:5,poker:5},
+  luckOn:true, luck:{craps:5,blackjack:5,poker:5,slots:5},
   animOn:true,
   dealersBusted:0, wonFromHouse:0,
   dealerIdx:0, dealerWinsVsYou:0
@@ -589,6 +687,7 @@ function bindLuck(id,key,valId,descId){
 bindLuck('luckCraps','craps','luckCrapsVal','luckCrapsDesc');
 bindLuck('luckBj','blackjack','luckBjVal','luckBjDesc');
 bindLuck('luckPk','poker','luckPkVal','luckPkDesc');
+bindLuck('luckSlots','slots','luckSlotsVal','luckSlotsDesc');
 
 const luckToggle=document.getElementById('luckToggle');
 function syncToggle(){luckToggle.classList.toggle('on',S.luckOn);}
@@ -619,7 +718,7 @@ document.getElementById('installFromSettings').onclick=()=>{
 };
 document.getElementById('resetAll').onclick=()=>{
   if(confirm('Reset bankrolls, luck, and dealers to default?')){
-    S={bank:1000,casino:4000000000000,luckOn:true,luck:{craps:5,blackjack:5,poker:5},animOn:true,
+    S={bank:1000,casino:4000000000000,luckOn:true,luck:{craps:5,blackjack:5,poker:5,slots:5},animOn:true,
        dealersBusted:0,wonFromHouse:0,dealerIdx:0,dealerWinsVsYou:0};
     save();location.reload();
   }
@@ -1268,6 +1367,215 @@ function evalPoker(cards){
   return{name:'High Card',mult:0};
 }
 renderPK();pkBetAmtEl.textContent=fmt(25);
+
+/* ============================================================
+   CHERRY SLOTS — 3 reels x 3 rows, 5 paylines, luck-aware
+   ============================================================ */
+const SLOT_SYMBOLS=[
+  {k:'seven', g:'7️⃣',  pay3:50, pay2:0,  weight:1},
+  {k:'bar',   g:'📊',  pay3:20, pay2:0,  weight:2, label:'BAR'},
+  {k:'bell',  g:'🔔',  pay3:15, pay2:0,  weight:3},
+  {k:'cherry',g:'🍒',  pay3:10, pay2:2,  weight:3},
+  {k:'lemon', g:'🍋',  pay3:6,  pay2:0,  weight:4},
+  {k:'plum',  g:'🟣',  pay3:5,  pay2:0,  weight:4},
+  {k:'melon', g:'🍉',  pay3:8,  pay2:0,  weight:3},
+];
+// use a nicer bar glyph
+SLOT_SYMBOLS[1].g='🅱️';
+const SYM_BY_K={};SLOT_SYMBOLS.forEach(s=>SYM_BY_K[s.k]=s);
+// weighted pool for fair random
+const SLOT_POOL=[];SLOT_SYMBOLS.forEach(s=>{for(let i=0;i<s.weight;i++)SLOT_POOL.push(s.k);});
+// 5 paylines on a 3x3 grid. rows: 0=top,1=mid,2=bottom. Each = [r_reel0, r_reel1, r_reel2]
+const PAYLINES=[
+  [1,1,1], // middle
+  [0,0,0], // top
+  [2,2,2], // bottom
+  [0,1,2], // diagonal \
+  [2,1,0], // diagonal /
+];
+const LINE_COLORS=['#e8c876','#5fd99a','#d94343','#9b59b6','#4aa3df'];
+
+const slot={perLine:5, lines:5, grid:null, spinning:false};
+
+function slotRandSym(){return SLOT_POOL[Math.random()*SLOT_POOL.length|0];}
+function buildPaytable(){
+  const c=document.getElementById('slotPay');
+  c.querySelectorAll('.pt-r').forEach(r=>r.remove());
+  SLOT_SYMBOLS.slice().sort((a,b)=>b.pay3-a.pay3).forEach(s=>{
+    const r=document.createElement('div');r.className='pt-r'+(s.pay3>=20?' hi':'');
+    const two=s.pay2?('  ·  2× = '+s.pay2+'×'):'';
+    r.innerHTML=`<span>${s.g} ${s.label||s.k}</span><span>3× = ${s.pay3}×${two}</span>`;
+    c.appendChild(r);
+  });
+}
+buildPaytable();
+
+function updateSlotBet(){
+  slot.total=slot.perLine*slot.lines;
+  document.getElementById('slLines').textContent=slot.lines;
+  document.getElementById('slPerLine').textContent=fmt(slot.perLine);
+  document.getElementById('slTotal').textContent=fmt(slot.total);
+}
+// line selector
+document.querySelectorAll('#lineSelect button').forEach(b=>{
+  b.onclick=()=>{if(slot.spinning)return;slot.lines=+b.dataset.lines;
+    document.querySelectorAll('#lineSelect button').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');updateSlotBet();};
+});
+// per-line chips
+document.querySelectorAll('#slotChips .chip[data-v]').forEach(c=>{
+  c.onclick=()=>{if(slot.spinning)return;slot.perLine=+c.dataset.v;
+    document.querySelectorAll('#slotChips .chip').forEach(x=>x.classList.remove('sel'));c.classList.add('sel');updateSlotBet();};
+});
+document.getElementById('slotMax').onclick=()=>{
+  if(slot.spinning)return;
+  slot.lines=5;slot.perLine=500;
+  document.querySelectorAll('#lineSelect button').forEach(x=>x.classList.toggle('sel',x.dataset.lines==='5'));
+  document.querySelectorAll('#slotChips .chip').forEach(x=>x.classList.toggle('sel',x.dataset.v==='500'));
+  updateSlotBet();slotMsg('Max bet — 5 lines at $500.');
+};
+function slotMsg(t,c){const m=document.getElementById('slotMsg');m.textContent=t;m.className='slot-readout'+(c?' '+c:'');}
+
+// render a strip with given visible 3 symbols (plus padding above/below for spin illusion)
+function setStrip(reelIdx,visible3){
+  const strip=document.getElementById('strip'+reelIdx);strip.innerHTML='';strip.style.transform='translateY(0)';
+  // pad one random above, the 3 visible, one random below — center the middle row
+  const seq=[slotRandSym(),...visible3,slotRandSym()];
+  seq.forEach(k=>{const d=document.createElement('div');d.className='symbol';d.textContent=SYM_BY_K[k].g;strip.appendChild(d);});
+  // shift so the 3 visible occupy the window (each symbol 66px; window shows 3 = 198px; we have 5 = 330px)
+  strip.style.transform='translateY(-66px)';
+}
+function blankStrips(){for(let i=0;i<3;i++)setStrip(i,[slotRandSym(),slotRandSym(),slotRandSym()]);}
+
+// luck-aware grid generation. returns 3x3: grid[reel][row]
+function spinGrid(){
+  const fav=favorRoll('slots'); // {active, favor}
+  // fair baseline
+  const grid=[[],[],[]];
+  for(let r=0;r<3;r++)for(let row=0;row<3;row++)grid[r][row]=slotRandSym();
+  if(!fav.active) return grid;
+  if(fav.favor){
+    // craft a win on a random active payline: pick a symbol & set all 3 reels on that line
+    const activeLines=PAYLINES.slice(0,slot.lines);
+    const line=activeLines[Math.random()*activeLines.length|0];
+    // weight toward mid-value symbols so it's exciting but not always a jackpot
+    const choices=['cherry','bell','melon','lemon','plum','bar','seven'];
+    const wpick=['cherry','cherry','bell','bell','melon','lemon','plum','bar','seven']; // seven rare
+    const sym=wpick[Math.random()*wpick.length|0];
+    for(let r=0;r<3;r++)grid[r][line[r]]=sym;
+  }else{
+    // unfavorable: ensure NO active line is a 3-match, and break cherry-2 on line 1 reels
+    let guard=0;
+    while(hasAnyWin(grid)&&guard++<60){
+      for(let r=0;r<3;r++)for(let row=0;row<3;row++)grid[r][row]=slotRandSym();
+    }
+  }
+  return grid;
+}
+function hasAnyWin(grid){
+  const lines=PAYLINES.slice(0,slot.lines);
+  for(const ln of lines){
+    const a=grid[0][ln[0]],b=grid[1][ln[1]],c=grid[2][ln[2]];
+    if(a===b&&b===c)return true;
+    // cherry 2-of-a-kind (first two reels)
+    if(a==='cherry'&&b==='cherry')return true;
+  }
+  return false;
+}
+
+// evaluate wins -> {total, hits:[{lineIdx, sym, count, payShare}]}
+function evalSlots(grid){
+  const lines=PAYLINES.slice(0,slot.lines);
+  const perLineBet=slot.perLine;
+  let total=0;const hits=[];
+  lines.forEach((ln,i)=>{
+    const a=grid[0][ln[0]],b=grid[1][ln[1]],c=grid[2][ln[2]];
+    const sa=SYM_BY_K[a];
+    if(a===b&&b===c){
+      const win=sa.pay3*perLineBet;total+=win;hits.push({lineIdx:i,sym:a,count:3,win});
+    } else if(a==='cherry'&&b==='cherry'){
+      const win=SYM_BY_K.cherry.pay2*perLineBet;total+=win;hits.push({lineIdx:i,sym:'cherry',count:2,win});
+    } else if(a==='cherry'){ // single leading cherry pays pay2/2? keep simple: 1 cherry pays pay2 * 0 -> skip
+      // (no single-cherry pay to keep math clean)
+    }
+  });
+  return {total,hits};
+}
+
+// place win-cell highlights over the winning positions
+function showWinCells(grid,hits){
+  clearWinCells();
+  const win=document.getElementById('slotWindow');
+  const reelEls=[document.getElementById('reel0'),document.getElementById('reel1'),document.getElementById('reel2')];
+  hits.forEach(h=>{
+    const ln=PAYLINES[h.lineIdx];
+    const n=h.count;
+    for(let r=0;r<n;r++){
+      const reel=reelEls[r];const rb=reel.getBoundingClientRect();const wb=win.getBoundingClientRect();
+      const row=ln[r];
+      const cell=document.createElement('div');cell.className='win-cell';
+      cell.style.left=(rb.left-wb.left)+'px';
+      cell.style.width=rb.width+'px';
+      cell.style.top=(rb.top-wb.top + row*66)+'px';
+      cell.style.height='66px';
+      cell.style.borderColor=LINE_COLORS[h.lineIdx];
+      cell.style.boxShadow='0 0 14px '+LINE_COLORS[h.lineIdx];
+      win.appendChild(cell);
+    }
+  });
+}
+function clearWinCells(){document.querySelectorAll('#slotWindow .win-cell').forEach(e=>e.remove());}
+
+async function slotSpin(){
+  if(slot.spinning)return;
+  updateSlotBet();
+  const cost=slot.total;
+  if(S.bank<cost){slotMsg('Not enough bankroll for that bet.','lose');return;}
+  takeStake(cost);                // stake leaves bank
+  clearWinCells();
+  slot.spinning=true;
+  document.getElementById('slotSpin').disabled=true;document.getElementById('slotMax').disabled=true;
+  const grid=spinGrid();
+  slot.grid=grid;
+
+  if(S.animOn){
+    slotMsg('Spinning…');
+    const strips=[document.getElementById('strip0'),document.getElementById('strip1'),document.getElementById('strip2')];
+    strips.forEach(s=>s.classList.add('spinning'));
+    // stop reels one by one
+    for(let r=0;r<3;r++){
+      await wait(420+r*260);
+      strips[r].classList.remove('spinning');
+      setStrip(r,[grid[r][0],grid[r][1],grid[r][2]]);
+    }
+    await wait(150);
+  }else{
+    for(let r=0;r<3;r++)setStrip(r,[grid[r][0],grid[r][1],grid[r][2]]);
+  }
+
+  // settle
+  const {total,hits}=evalSlots(grid);
+  if(total>0){
+    S.bank+=total;                 // return winnings
+    const houseDelta=total;        // winnings come from house (stake already taken)
+    S.casino-=houseDelta;S.wonFromHouse+=houseDelta;refreshMoney();
+    showWinCells(grid,hits);
+    const best=hits.slice().sort((a,b)=>b.win-a.win)[0];
+    const name=(best.count===2?'Two ':'Three ')+slotLabel(best.sym);
+    slotMsg(`${name}! ${hits.length>1?hits.length+' lines · ':''}+${fmt(total)}`,'win');
+    flash('+'+fmt(total),'var(--win)');
+  }else{
+    S.casino+=cost;refreshMoney(); // stake lost to house
+    slotMsg('No win — spin again.','lose');
+  }
+  slot.spinning=false;
+  document.getElementById('slotSpin').disabled=false;document.getElementById('slotMax').disabled=false;
+}
+function slotLabel(k){const s=SYM_BY_K[k];return (s.label||k.charAt(0).toUpperCase()+k.slice(1));}
+document.getElementById('slotSpin').onclick=slotSpin;
+
+// init slots display
+blankStrips();updateSlotBet();
+
 
 /* init */
 refreshMoney();
