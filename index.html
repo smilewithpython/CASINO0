@@ -310,8 +310,13 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
 .reel::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:3;
   background:linear-gradient(180deg,rgba(0,0,0,.35) 0%,transparent 22%,transparent 78%,rgba(0,0,0,.35) 100%);}
 .reel-strip{display:flex;flex-direction:column;position:absolute;left:0;right:0;top:0;will-change:transform;}
-.symbol{height:66px;display:flex;align-items:center;justify-content:center;font-size:38px;
+.symbol{height:66px;display:flex;align-items:center;justify-content:center;
   border-bottom:1px solid rgba(0,0,0,.06);user-select:none;}
+.symbol svg{width:48px;height:48px;display:block;filter:drop-shadow(0 1px 1px rgba(0,0,0,.25));}
+.pay-sym{display:inline-flex;align-items:center;}
+.pay-sym svg{width:20px;height:20px;vertical-align:middle;margin-right:5px;}
+#slotPay .pt-r{align-items:center;}
+#slotPay .pay-name{flex:1;text-align:left;}
 .reel-strip.spinning{animation:reelSpin .18s linear infinite;}
 @keyframes reelSpin{from{transform:translateY(0);}to{transform:translateY(-198px);}}
 /* center payline highlight */
@@ -337,6 +342,22 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
 .line-select button{flex:1;max-width:90px;background:rgba(0,0,0,.28);border:1.5px solid var(--felt-line);
   color:var(--bone);border-radius:10px;padding:11px 0;font-size:16px;font-weight:700;cursor:pointer;font-family:Georgia,serif;}
 .line-select button.sel{border-color:var(--brass-bright);background:rgba(201,162,75,.15);color:var(--brass-bright);box-shadow:0 0 10px rgba(201,162,75,.2);}
+/* ---- fixed Spin dock (slots) ---- */
+.slot-dock{position:fixed;left:0;right:0;bottom:0;z-index:140;
+  display:flex;align-items:center;gap:10px;padding:10px 14px calc(10px + env(safe-area-inset-bottom));
+  background:linear-gradient(180deg,rgba(20,10,28,.86),rgba(12,6,18,.97));
+  border-top:2px solid var(--brass);box-shadow:0 -6px 20px rgba(0,0,0,.5);backdrop-filter:blur(8px);}
+.slot-dock .btn{margin:0;}
+.slot-dock #slotMax{flex:0 0 auto;padding:13px 14px;font-size:13px;}
+.dock-total{flex:1;text-align:center;line-height:1.1;}
+.dock-total .dt-lbl{font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--bone-dim);display:block;}
+.dock-total .dt-val{font-family:Georgia,serif;font-size:22px;color:var(--brass-bright);font-variant-numeric:tabular-nums;}
+.dock-spin{flex:0 0 auto;padding:15px 30px;font-size:17px;letter-spacing:2px;
+  background:linear-gradient(180deg,#6fe39a,#2fae63);color:#06281a;box-shadow:0 3px 0 #1c6e3e,0 5px 12px rgba(0,0,0,.45);}
+.dock-spin:active{transform:translateY(2px);box-shadow:0 1px 0 #1c6e3e;}
+.dock-spin:disabled{opacity:.5;}
+/* spacer so the paytable isn't hidden behind the fixed dock */
+.slot-spacer{height:84px;}
 </style>
 </head>
 <body>
@@ -520,17 +541,20 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
         <div class="chip" data-v="100">100</div>
         <div class="chip" data-v="500">500</div>
       </div>
-
-      <div class="btn-row">
-        <button class="btn danger" id="slotMax">Max Bet</button>
-        <button class="btn" id="slotSpin">Spin</button>
-      </div>
     </div>
 
     <div class="paytable" id="slotPay"><div class="pt-h">Payouts (3 in a line, × total-bet share)</div></div>
     <div class="hint">Each symbol pays for 3 matching on an active payline. Cherries also pay for 2. More lines = more ways to hit. Max Bet plays all 5 lines at the top chip.</div>
+    <div class="slot-spacer"></div>
   </section>
 </main>
+
+<!-- Fixed Spin bar (only visible on the Slots tab) -->
+<div id="slotDock" class="slot-dock" style="display:none;">
+  <button class="btn danger" id="slotMax">Max Bet</button>
+  <div class="dock-total"><span class="dt-lbl">Bet</span><span class="dt-val" id="dockTotal">$25</span></div>
+  <button class="btn dock-spin" id="slotSpin">SPIN</button>
+</div>
 
 <!-- ============ SETTINGS MODAL ============ -->
 <div class="modal-bg" id="settings">
@@ -664,7 +688,10 @@ function favorRoll(game){ // returns {favor:bool, active:bool}
 document.querySelectorAll('nav button').forEach(b=>{
   b.onclick=()=>{document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
     document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));
-    b.classList.add('active');document.getElementById(b.dataset.g).classList.add('active');};
+    b.classList.add('active');document.getElementById(b.dataset.g).classList.add('active');
+    const dock=document.getElementById('slotDock');
+    if(dock) dock.style.display = (b.dataset.g==='slots') ? 'flex' : 'none';
+  };
 });
 const settingsEl=document.getElementById('settings');
 document.getElementById('gearBtn').onclick=()=>{syncSettings();settingsEl.classList.add('show');};
@@ -1372,16 +1399,72 @@ renderPK();pkBetAmtEl.textContent=fmt(25);
    CHERRY SLOTS — 3 reels x 3 rows, 5 paylines, luck-aware
    ============================================================ */
 const SLOT_SYMBOLS=[
-  {k:'seven', g:'7️⃣',  pay3:50, pay2:0,  weight:1},
-  {k:'bar',   g:'📊',  pay3:20, pay2:0,  weight:2, label:'BAR'},
-  {k:'bell',  g:'🔔',  pay3:15, pay2:0,  weight:3},
-  {k:'cherry',g:'🍒',  pay3:10, pay2:2,  weight:3},
-  {k:'lemon', g:'🍋',  pay3:6,  pay2:0,  weight:4},
-  {k:'plum',  g:'🟣',  pay3:5,  pay2:0,  weight:4},
-  {k:'melon', g:'🍉',  pay3:8,  pay2:0,  weight:3},
+  {k:'seven', pay3:50, pay2:0,  weight:1, label:'7'},
+  {k:'bar',   pay3:20, pay2:0,  weight:2, label:'BAR'},
+  {k:'bell',  pay3:15, pay2:0,  weight:3, label:'Bell'},
+  {k:'cherry',pay3:10, pay2:2,  weight:3, label:'Cherry'},
+  {k:'lemon', pay3:6,  pay2:0,  weight:4, label:'Lemon'},
+  {k:'plum',  pay3:5,  pay2:0,  weight:4, label:'Plum'},
+  {k:'melon', pay3:8,  pay2:0,  weight:3, label:'Melon'},
 ];
-// use a nicer bar glyph
-SLOT_SYMBOLS[1].g='🅱️';
+// Custom SVG art per symbol (52x52 viewBox), richer than emoji.
+const SLOT_SVG={
+  seven:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="g7" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ff5d5d"/><stop offset="0.5" stop-color="#d61f1f"/><stop offset="1" stop-color="#8e0f0f"/></linearGradient>
+      <linearGradient id="g7s" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff7c0"/><stop offset="1" stop-color="#e8b84b"/></linearGradient></defs>
+    <path d="M12 9 h28 a2 2 0 0 1 2 2 v4 a2 2 0 0 1-.5 1.3 L26 44 a3 3 0 0 1-2.6 1.5 h-6 a1.5 1.5 0 0 1-1.3-2.2 L31 18 H12 a2 2 0 0 1-2-2 v-5 a2 2 0 0 1 2-2 z"
+      fill="url(#g7)" stroke="url(#g7s)" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M14 11.5 h24 l-1 3 H15 z" fill="#ffffff" opacity="0.28"/></svg>`,
+  bar:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="gb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe89a"/><stop offset="0.5" stop-color="#e8b13a"/><stop offset="1" stop-color="#9a6e16"/></linearGradient></defs>
+    <g>
+    <rect x="8" y="11" width="36" height="8.5" rx="2.2" fill="url(#gb)" stroke="#6e4d0c" stroke-width="1.4"/>
+    <rect x="8" y="21.8" width="36" height="8.5" rx="2.2" fill="url(#gb)" stroke="#6e4d0c" stroke-width="1.4"/>
+    <rect x="8" y="32.6" width="36" height="8.5" rx="2.2" fill="url(#gb)" stroke="#6e4d0c" stroke-width="1.4"/>
+    <text x="26" y="18" font-family="Arial Black,Arial,sans-serif" font-size="6.4" font-weight="900" fill="#6e4d0c" text-anchor="middle">BAR</text>
+    <text x="26" y="28.8" font-family="Arial Black,Arial,sans-serif" font-size="6.4" font-weight="900" fill="#6e4d0c" text-anchor="middle">BAR</text>
+    <text x="26" y="39.6" font-family="Arial Black,Arial,sans-serif" font-size="6.4" font-weight="900" fill="#6e4d0c" text-anchor="middle">BAR</text>
+    </g></svg>`,
+  bell:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+    <defs><radialGradient id="gbell" cx="0.4" cy="0.3" r="0.8"><stop offset="0" stop-color="#fff3b0"/><stop offset="0.5" stop-color="#f2c233"/><stop offset="1" stop-color="#b07d12"/></radialGradient></defs>
+    <path d="M26 8 a3 3 0 0 1 3 3 c7 2 9 9 9 16 c0 4 1 7 3 9 H11 c2-2 3-5 3-9 c0-7 2-14 9-16 a3 3 0 0 1 3-3 z"
+      fill="url(#gbell)" stroke="#7a5410" stroke-width="2"/>
+    <ellipse cx="26" cy="44.5" rx="4" ry="3.2" fill="url(#gbell)" stroke="#7a5410" stroke-width="1.6"/>
+    <path d="M20 14 c-3 3-4 8-4 13" fill="none" stroke="#fff" stroke-width="2" opacity="0.4" stroke-linecap="round"/></svg>`,
+  cherry:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+    <defs><radialGradient id="gch" cx="0.35" cy="0.3" r="0.8"><stop offset="0" stop-color="#ff6b7a"/><stop offset="0.5" stop-color="#d61f3a"/><stop offset="1" stop-color="#8e0f22"/></radialGradient>
+    <radialGradient id="gch2" cx="0.35" cy="0.3" r="0.8"><stop offset="0" stop-color="#ff5d6e"/><stop offset="0.5" stop-color="#c01a33"/><stop offset="1" stop-color="#7e0c1e"/></radialGradient></defs>
+    <path d="M28 10 C32 14 40 14 41 22" fill="none" stroke="#3a8f3a" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M28 10 C24 16 18 18 15 28" fill="none" stroke="#3a8f3a" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M27 9 c5-3 11-2 14 1 c-5 1-9 2-13 5 c-1-2-1-4-1-6z" fill="#4cae4c" stroke="#2f7d2f" stroke-width="1"/>
+    <circle cx="15" cy="34" r="8.5" fill="url(#gch)" stroke="#6e0c1a" stroke-width="1.4"/>
+    <circle cx="38" cy="33" r="8.5" fill="url(#gch2)" stroke="#6e0c1a" stroke-width="1.4"/>
+    <circle cx="12.5" cy="31" r="2.4" fill="#fff" opacity="0.55"/>
+    <circle cx="35.5" cy="30" r="2.4" fill="#fff" opacity="0.5"/></svg>`,
+  lemon:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+    <defs><radialGradient id="gl" cx="0.38" cy="0.32" r="0.85"><stop offset="0" stop-color="#fff8b0"/><stop offset="0.5" stop-color="#f5d020"/><stop offset="1" stop-color="#c69a08"/></radialGradient></defs>
+    <ellipse cx="26" cy="26" rx="17" ry="13" fill="url(#gl)" stroke="#a8800a" stroke-width="1.8" transform="rotate(-20 26 26)"/>
+    <ellipse cx="9.5" cy="22.5" rx="2.6" ry="2" fill="#d8b018" transform="rotate(-20 26 26)"/>
+    <ellipse cx="42.5" cy="29.5" rx="2.6" ry="2" fill="#d8b018" transform="rotate(-20 26 26)"/>
+    <ellipse cx="19" cy="19" rx="5" ry="3" fill="#fff" opacity="0.45" transform="rotate(-20 26 26)"/></svg>`,
+  plum:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+    <defs><radialGradient id="gp" cx="0.36" cy="0.3" r="0.82"><stop offset="0" stop-color="#c479e0"/><stop offset="0.45" stop-color="#8e3fb0"/><stop offset="1" stop-color="#4e1c6e"/></radialGradient></defs>
+    <path d="M24 11 c1-2 3-3 5-2" fill="none" stroke="#3a8f3a" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M30 9 c3-1 6 0 7 2 c-3 1-5 1-7 3 c-1-2-1-3 0-5z" fill="#4cae4c"/>
+    <circle cx="26" cy="30" r="15" fill="url(#gp)" stroke="#3c1556" stroke-width="1.6"/>
+    <path d="M26 16 c-4 5-4 18 0 28" fill="none" stroke="#3c1556" stroke-width="1.4" opacity="0.5"/>
+    <ellipse cx="20" cy="24" rx="3.5" ry="4.5" fill="#fff" opacity="0.35" transform="rotate(-20 20 24)"/></svg>`,
+  melon:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="gm" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff8a9a"/><stop offset="1" stop-color="#e63950"/></linearGradient></defs>
+    <path d="M8 18 a18 11 0 0 0 36 0 z" fill="url(#gm)" stroke="#2f8f3a" stroke-width="0"/>
+    <path d="M7 18 a19 12 0 0 0 38 0" fill="none" stroke="#2f8f3a" stroke-width="4"/>
+    <path d="M7 18 a19 12 0 0 0 38 0" fill="none" stroke="#bfe6a0" stroke-width="1.4"/>
+    <g fill="#3a2410">
+      <ellipse cx="18" cy="24" rx="1.3" ry="2"/><ellipse cx="26" cy="27" rx="1.3" ry="2"/>
+      <ellipse cx="34" cy="24" rx="1.3" ry="2"/><ellipse cx="22" cy="22" rx="1.3" ry="2"/><ellipse cx="30" cy="22" rx="1.3" ry="2"/>
+    </g></svg>`
+};
 const SYM_BY_K={};SLOT_SYMBOLS.forEach(s=>SYM_BY_K[s.k]=s);
 // weighted pool for fair random
 const SLOT_POOL=[];SLOT_SYMBOLS.forEach(s=>{for(let i=0;i<s.weight;i++)SLOT_POOL.push(s.k);});
@@ -1404,7 +1487,7 @@ function buildPaytable(){
   SLOT_SYMBOLS.slice().sort((a,b)=>b.pay3-a.pay3).forEach(s=>{
     const r=document.createElement('div');r.className='pt-r'+(s.pay3>=20?' hi':'');
     const two=s.pay2?('  ·  2× = '+s.pay2+'×'):'';
-    r.innerHTML=`<span>${s.g} ${s.label||s.k}</span><span>3× = ${s.pay3}×${two}</span>`;
+    r.innerHTML=`<span class="pay-sym">${SLOT_SVG[s.k]}</span><span class="pay-name">${s.label||s.k}</span><span>3× = ${s.pay3}×${two}</span>`;
     c.appendChild(r);
   });
 }
@@ -1415,6 +1498,7 @@ function updateSlotBet(){
   document.getElementById('slLines').textContent=slot.lines;
   document.getElementById('slPerLine').textContent=fmt(slot.perLine);
   document.getElementById('slTotal').textContent=fmt(slot.total);
+  const dt=document.getElementById('dockTotal');if(dt)dt.textContent=fmt(slot.total);
 }
 // line selector
 document.querySelectorAll('#lineSelect button').forEach(b=>{
@@ -1440,7 +1524,7 @@ function setStrip(reelIdx,visible3){
   const strip=document.getElementById('strip'+reelIdx);strip.innerHTML='';strip.style.transform='translateY(0)';
   // pad one random above, the 3 visible, one random below — center the middle row
   const seq=[slotRandSym(),...visible3,slotRandSym()];
-  seq.forEach(k=>{const d=document.createElement('div');d.className='symbol';d.textContent=SYM_BY_K[k].g;strip.appendChild(d);});
+  seq.forEach(k=>{const d=document.createElement('div');d.className='symbol';d.innerHTML=SLOT_SVG[k];strip.appendChild(d);});
   // shift so the 3 visible occupy the window (each symbol 66px; window shows 3 = 198px; we have 5 = 330px)
   strip.style.transform='translateY(-66px)';
 }
