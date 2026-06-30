@@ -596,6 +596,10 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
       <div class="toggle on" id="animToggle"><div class="knob"></div></div>
     </div>
     <div class="setting-row">
+      <div><div class="sr-lbl">🔊 Sound effects</div><div class="sr-sub">Chip clinks, win chimes, dice &amp; reels. Turn off to mute.</div></div>
+      <div class="toggle on" id="soundToggle"><div class="knob"></div></div>
+    </div>
+    <div class="setting-row">
       <div><div class="sr-lbl">House bankroll</div><div class="sr-sub">What you're playing against</div></div>
       <input class="in-amt" id="casinoInput" value="4000000000000">
     </div>
@@ -630,7 +634,7 @@ const SAVE_KEY='feltbone_v2';
 let S={
   bank:1000, casino:4000000000000,
   luckOn:true, luck:{craps:5,blackjack:5,poker:5,slots:5},
-  animOn:true,
+  animOn:true, soundOn:true,
   dealersBusted:0, wonFromHouse:0,
   dealerIdx:0, dealerWinsVsYou:0
 };
@@ -644,6 +648,81 @@ load();
 const bankEl=document.getElementById('bankAmt'),casinoEl=document.getElementById('casinoAmt');
 function fmt(n){ return '$'+Math.round(n).toLocaleString(); }
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
+
+/* ============================================================
+   SOUND ENGINE (Web Audio API — synthesized, no files)
+   Respects S.soundOn. Lazily creates AudioContext on first use
+   (browsers require a user gesture before audio can start).
+   ============================================================ */
+const SFX=(function(){
+  let ctx=null;
+  function ac(){
+    if(!ctx){ try{ctx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){ctx=null;} }
+    if(ctx&&ctx.state==='suspended') ctx.resume().catch(()=>{});
+    return ctx;
+  }
+  // one oscillator "blip"
+  function tone(freq,start,dur,type,gain,glideTo){
+    const c=ac();if(!c)return;
+    const t0=c.currentTime+start;
+    const o=c.createOscillator(),g=c.createGain();
+    o.type=type||'sine';o.frequency.setValueAtTime(freq,t0);
+    if(glideTo)o.frequency.exponentialRampToValueAtTime(glideTo,t0+dur);
+    g.gain.setValueAtTime(0,t0);
+    g.gain.linearRampToValueAtTime(gain==null?0.18:gain,t0+0.008);
+    g.gain.exponentialRampToValueAtTime(0.0008,t0+dur);
+    o.connect(g);g.connect(c.destination);
+    o.start(t0);o.stop(t0+dur+0.02);
+  }
+  // filtered noise burst (for chip clink / dice clatter)
+  function noise(start,dur,gain,hp){
+    const c=ac();if(!c)return;
+    const t0=c.currentTime+start;
+    const n=Math.floor(c.sampleRate*dur);
+    const buf=c.createBuffer(1,n,c.sampleRate);
+    const d=buf.getChannelData(0);
+    for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*(1-i/n); // decaying
+    const src=c.createBufferSource();src.buffer=buf;
+    const g=c.createGain();g.gain.value=gain==null?0.12:gain;
+    let node=src;
+    if(hp){const f=c.createBiquadFilter();f.type='highpass';f.frequency.value=hp;src.connect(f);node=f;}
+    node.connect(g);g.connect(c.destination);
+    src.start(t0);src.stop(t0+dur);
+  }
+  function on(){return S.soundOn!==false;}
+  const api={
+    // unlock audio on first gesture
+    unlock(){ if(on()) ac(); },
+    chip(){ if(!on())return; noise(0,0.05,0.10,2200); tone(900,0.0,0.06,'square',0.05,600); },
+    chipStack(){ if(!on())return; for(let i=0;i<3;i++){noise(i*0.05,0.05,0.08,2000);} },
+    bet(){ if(!on())return; noise(0,0.05,0.10,2200); tone(700,0,0.05,'square',0.05); },
+    cardDeal(){ if(!on())return; noise(0,0.07,0.08,1200); },
+    cardFlip(){ if(!on())return; noise(0,0.05,0.07,900); tone(500,0,0.05,'triangle',0.04); },
+    diceRoll(){ if(!on())return; for(let i=0;i<5;i++){noise(i*0.08,0.06,0.09,800);} },
+    diceLand(){ if(!on())return; noise(0,0.08,0.12,500); tone(180,0,0.1,'sine',0.08,120); },
+    reelStop(){ if(!on())return; noise(0,0.04,0.08,1500); tone(320,0,0.05,'square',0.05,220); },
+    win(){ if(!on())return; // happy ascending chime + chip rattle
+      [523,659,784].forEach((f,i)=>tone(f,i*0.09,0.22,'triangle',0.16));
+      for(let i=0;i<4;i++)noise(0.05+i*0.06,0.05,0.07,2000);
+    },
+    bigWin(){ if(!on())return; // fanfare for blackjack / jackpots
+      [523,659,784,1047].forEach((f,i)=>tone(f,i*0.10,0.3,'triangle',0.18));
+      [659,784,1047,1319].forEach((f,i)=>tone(f,0.42+i*0.10,0.32,'square',0.10));
+      for(let i=0;i<8;i++)noise(0.1+i*0.05,0.05,0.06,2200);
+    },
+    jackpot(){ if(!on())return; // triple sevens — big rolling fanfare
+      const seq=[523,659,784,1047,784,1047,1319];
+      seq.forEach((f,i)=>tone(f,i*0.11,0.34,'triangle',0.18));
+      seq.forEach((f,i)=>tone(f*1.5,0.05+i*0.11,0.3,'square',0.08));
+      for(let i=0;i<14;i++)noise(0.1+i*0.05,0.05,0.06,2200);
+    },
+    lose(){ if(!on())return; tone(330,0,0.28,'sawtooth',0.12,140); }, // descending sad tone
+    push(){ if(!on())return; tone(440,0,0.18,'sine',0.10); },
+    click(){ if(!on())return; tone(600,0,0.03,'square',0.05); },
+  };
+  return api;
+})();
+
 function fmtBig(n){
   const a=Math.abs(n);
   if(a>=1e12)return '$'+(n/1e12).toFixed(1)+'T';
@@ -695,6 +774,13 @@ document.querySelectorAll('nav button').forEach(b=>{
 });
 const settingsEl=document.getElementById('settings');
 document.getElementById('gearBtn').onclick=()=>{syncSettings();settingsEl.classList.add('show');};
+
+/* Unlock audio on the very first tap/click anywhere (browser autoplay policy). */
+(function(){
+  function unlock(){ SFX.unlock(); window.removeEventListener('pointerdown',unlock); window.removeEventListener('touchstart',unlock); }
+  window.addEventListener('pointerdown',unlock,{once:false});
+  window.addEventListener('touchstart',unlock,{once:false});
+})();
 document.getElementById('closeSettings').onclick=()=>settingsEl.classList.remove('show');
 settingsEl.onclick=e=>{if(e.target===settingsEl)settingsEl.classList.remove('show');};
 
@@ -724,6 +810,10 @@ const animToggle=document.getElementById('animToggle');
 function syncAnim(){animToggle.classList.toggle('on',S.animOn);}
 animToggle.onclick=()=>{S.animOn=!S.animOn;syncAnim();save();};
 
+const soundToggle=document.getElementById('soundToggle');
+function syncSound(){soundToggle.classList.toggle('on',S.soundOn!==false);}
+soundToggle.onclick=()=>{S.soundOn=!(S.soundOn!==false);syncSound();save();if(S.soundOn){SFX.unlock();SFX.click();}};
+
 document.getElementById('casinoInput').onchange=e=>{const v=parseFloat(e.target.value.replace(/[^0-9.]/g,''));
   if(!isNaN(v)){S.casino=v;refreshMoney();}};
 document.getElementById('bankInput').onchange=e=>{const v=parseFloat(e.target.value.replace(/[^0-9.]/g,''));
@@ -733,7 +823,7 @@ function syncSettings(){
   document.getElementById('casinoInput').value=Math.round(S.casino);
   document.getElementById('bankInput').value=Math.round(S.bank);
   document.getElementById('statDealer').textContent=DEALERS[S.dealerIdx].name.replace('Dealer ','');
-  syncToggle();syncAnim();refreshMoney();
+  syncToggle();syncAnim();syncSound();refreshMoney();
 }
 document.getElementById('installFromSettings').onclick=()=>{
   settingsEl.classList.remove('show');
@@ -745,7 +835,7 @@ document.getElementById('installFromSettings').onclick=()=>{
 };
 document.getElementById('resetAll').onclick=()=>{
   if(confirm('Reset bankrolls, luck, and dealers to default?')){
-    S={bank:1000,casino:4000000000000,luckOn:true,luck:{craps:5,blackjack:5,poker:5,slots:5},animOn:true,
+    S={bank:1000,casino:4000000000000,luckOn:true,luck:{craps:5,blackjack:5,poker:5,slots:5},animOn:true,soundOn:true,
        dealersBusted:0,wonFromHouse:0,dealerIdx:0,dealerWinsVsYou:0};
     save();location.reload();
   }
@@ -841,7 +931,7 @@ document.querySelectorAll('#craps [data-bet]').forEach(cell=>{
   cell.onclick=()=>{
     if(cell.classList.contains('disabled'))return;
     if(S.bank<cr.chip){crapsMsg('Not enough bankroll for that chip.','lose');return;}
-    const k=cell.dataset.bet;cr.bets[k]=(cr.bets[k]||0)+cr.chip;takeStake(cr.chip);renderCrapsStakes();
+    const k=cell.dataset.bet;cr.bets[k]=(cr.bets[k]||0)+cr.chip;takeStake(cr.chip);renderCrapsStakes();SFX.chip();
   };
 });
 document.getElementById('crapsClear').onclick=()=>{
@@ -902,14 +992,15 @@ document.getElementById('crapsRoll').onclick=async ()=>{
   cr.phase='rolling';btn.disabled=true;
   const [r1,r2]=rollDicePair();
   if(S.animOn){
-    crapsMsg('Rolling…');
+    crapsMsg('Rolling…');SFX.diceRoll();
     // two dice tumble with slightly different spins for natural feel
     await Promise.all([
       spinCube(c1,r1,3+(Math.random()*2|0),760),
       spinCube(c2,r2,3+(Math.random()*2|0),760+120)
     ]);
+    SFX.diceLand();
   }else{
-    setCubeFace(c1,r1);setCubeFace(c2,r2);
+    setCubeFace(c1,r1);setCubeFace(c2,r2);SFX.diceLand();
   }
   resolveCraps(r1,r2,r1+r2);
   cr.phase='';btn.disabled=false;
@@ -992,7 +1083,7 @@ function resolveCraps(r1,r2,sum){
   let msg='Rolled '+sum+' ('+r1+'+'+r2+'). '+(notes.join(' · ')||'No resolution.');
   if(couldNotKeep.length) msg+='  (Not enough to re-bet: '+couldNotKeep.join(', ')+')';
   crapsMsg(msg,net>0?'win':(net<0?'lose':''));
-  if(net>0)flash('+'+fmt(net),'var(--win)');else if(net<0)flash(fmt(net),'var(--lose)');
+  if(net>0){flash('+'+fmt(net),'var(--win)');SFX.win();}else if(net<0){flash(fmt(net),'var(--lose)');SFX.lose();}
 }
 buildCube(document.getElementById('cube1'));buildCube(document.getElementById('cube2'));
 setCubeFace(document.getElementById('cube1'),5);setCubeFace(document.getElementById('cube2'),4);
@@ -1114,7 +1205,7 @@ function bjWinPulse(hi){if(!S.animOn)return;handCardEls[hi].querySelectorAll('.c
 /* ---- betting ---- */
 document.querySelectorAll('#blackjack .chip[data-v]').forEach(c=>{
   c.onclick=()=>{if(bj.phase!=='bet')return;const v=+c.dataset.v;if(S.bank<v){bjMsg('Not enough bankroll.','lose');return;}
-    bj.bet+=v;takeStake(v);bjBetAmtEl.textContent=fmt(bj.bet);};
+    bj.bet+=v;takeStake(v);bjBetAmtEl.textContent=fmt(bj.bet);SFX.chip();};
 });
 document.getElementById('bjClear').onclick=()=>{if(bj.phase!=='bet')return;returnStake(bj.bet);bj.bet=0;bjBetAmtEl.textContent='$0';};
 function bjMsg(t,c){bjMsgEl.textContent=t;bjMsgEl.className='msg'+(c?' '+c:'');}
@@ -1132,7 +1223,9 @@ async function bjDeal(){
   bj.hands[0].cards.push(drawCard('player',bj.hands[0].cards));
   bj.dealer.push(drawCard('dealer',bj.dealer));
   bj.phase='playing';bjBetArea.style.display='none';
-  if(S.animOn){bjMsg('Dealing…');bjControls.innerHTML='';renderBJ(true,0);await wait(640);}
+  if(S.animOn){bjMsg('Dealing…');bjControls.innerHTML='';renderBJ(true,0);
+    for(let i=0;i<4;i++)setTimeout(()=>SFX.cardDeal(),i*110);
+    await wait(640);}
   else renderBJ(true);
   // naturals
   if(isBJ(bj.hands[0].cards)||isBJ(bj.dealer))return bjShowdown();
@@ -1153,7 +1246,7 @@ function bjSetup(){
   const s=document.getElementById('bjSplit');if(s)s.onclick=bjSplit;
 }
 function bjHit(){
-  const h=curHand();h.cards.push(drawCard('player',h.cards));renderBJ(true);
+  const h=curHand();h.cards.push(drawCard('player',h.cards));renderBJ(true);SFX.cardDeal();
   const v=handValue(h.cards);
   if(v>21){h.result='bust';advanceHand();}
   else if(v===21){advanceHand();}
@@ -1201,7 +1294,7 @@ function advanceHand(){
 async function bjShowdown(){
   bj.phase='done';bjControls.innerHTML='';
   renderBJ(false);
-  if(S.animOn){const hole=bjDealerEl.children[1];if(hole)hole.classList.add('flip');await wait(380);}
+  if(S.animOn){const hole=bjDealerEl.children[1];if(hole)hole.classList.add('flip');SFX.cardFlip();await wait(380);}
   const dealerHasNatural=isBJ(bj.dealer);
   // Dealer always completes its hand to 17+ (so you can see whether it would have made 21),
   // unless the dealer already has a natural blackjack.
@@ -1239,6 +1332,11 @@ function settleAllHands(){
   const dlabel = dBust?('Dealer busts at '+d):('Dealer '+d);
   bjMsg(dlabel+'. '+parts.join('  ·  ')+'   Net '+(net>=0?'+':'')+fmt(net),cls);
   if(net>0)flash('+'+fmt(net),'var(--win)');else if(net<0)flash(fmt(Math.abs(net))? '-'+fmt(Math.abs(net)):'$0','var(--lose)');
+  // sounds: blackjack/natural -> fanfare; normal win -> chime; push -> soft; loss -> thud
+  const anyNatural=bj.hands.some(h=>isBJ(h.cards)&&bj.hands.length===1);
+  if(net>0){ (anyNatural?SFX.bigWin:SFX.win)(); }
+  else if(net<0){ SFX.lose(); }
+  else { SFX.push(); }
   renderPlayerHands();
   // dealer roster reactions based on overall outcome
   if(dBust && net>0) bjDealerReact('bust');
@@ -1289,7 +1387,7 @@ const PK_PAY=[['Royal Flush',250],['Straight Flush',50],['Four of a Kind',25],['
   r.className='pt-r'+(m>=25?' hi':'');r.innerHTML=`<span>${n}</span><span>${m}×</span>`;c.appendChild(r);}})();
 function pkMsg(t,c){pkMsgEl.textContent=t;pkMsgEl.className='msg'+(c?' '+c:'');}
 document.querySelectorAll('#poker .chip[data-v]').forEach(c=>{
-  c.onclick=()=>{if(pk.phase!=='bet')return;const v=+c.dataset.v;pk.bet+=v;pkBetAmtEl.textContent=fmt(pk.bet);};
+  c.onclick=()=>{if(pk.phase!=='bet')return;const v=+c.dataset.v;pk.bet+=v;pkBetAmtEl.textContent=fmt(pk.bet);SFX.chip();};
 });
 document.getElementById('pkClear').onclick=()=>{if(pk.phase!=='bet')return;pk.bet=0;pkBetAmtEl.textContent='$0';};
 function renderPK(animSet){
@@ -1317,6 +1415,7 @@ async function pkDeal(){
   maybeLuckDeal();
   pk.phase='draw';pkBetArea.style.display='none';
   renderPK(S.animOn?'all':null);
+  if(S.animOn){for(let i=0;i<5;i++)setTimeout(()=>SFX.cardDeal(),i*100);}
   if(S.animOn){pkControls.innerHTML='';pkMsg('Dealing…');await wait(640);}
   pkMsg('Tap cards to hold, then Draw.');
   pkControls.innerHTML=`<button class="btn" id="pkDraw">Draw</button>`;
@@ -1350,13 +1449,14 @@ async function pkDraw(){
     replaced.push(i);
   }
   pk.phase='bet';
-  if(S.animOn){pkControls.innerHTML='';renderPK(replaced);await wait(520);}
+  if(S.animOn){pkControls.innerHTML='';renderPK(replaced);if(replaced.length)for(let i=0;i<replaced.length;i++)setTimeout(()=>SFX.cardDeal(),i*90);await wait(520);}
   else renderPK(null);
   const {name,mult}=evalPoker(pk.hand);
   if(mult>0){const ret=pk.bet*mult;S.bank+=ret;const houseDelta=ret-pk.bet;S.casino-=houseDelta;S.wonFromHouse+=Math.max(0,houseDelta);refreshMoney();
     pk._won=true;renderPK(null);
-    pkMsg(name+'! '+mult+'× — '+fmt(ret)+' back.','win');flash('+'+fmt(ret-pk.bet),'var(--win)');}
-  else{S.casino+=pk.bet;refreshMoney();pkMsg('No win ('+name+').','lose');flash('-'+fmt(pk.bet),'var(--lose)');}
+    pkMsg(name+'! '+mult+'× — '+fmt(ret)+' back.','win');flash('+'+fmt(ret-pk.bet),'var(--win)');
+    (mult>=25?SFX.bigWin:SFX.win)();}
+  else{S.casino+=pk.bet;refreshMoney();pkMsg('No win ('+name+').','lose');flash('-'+fmt(pk.bet),'var(--lose)');SFX.lose();}
   pkBetArea.style.display='';const last=pk.bet;
   pkControls.innerHTML=`<button class="btn" id="pkAgain">Deal Again (${fmt(last)})</button>`;
   document.getElementById('pkAgain').onclick=()=>pkDeal();
@@ -1507,7 +1607,7 @@ document.querySelectorAll('#lineSelect button').forEach(b=>{
 });
 // per-line chips
 document.querySelectorAll('#slotChips .chip[data-v]').forEach(c=>{
-  c.onclick=()=>{if(slot.spinning)return;slot.perLine=+c.dataset.v;
+  c.onclick=()=>{if(slot.spinning)return;slot.perLine=+c.dataset.v;SFX.chip();
     document.querySelectorAll('#slotChips .chip').forEach(x=>x.classList.remove('sel'));c.classList.add('sel');updateSlotBet();};
 });
 document.getElementById('slotMax').onclick=()=>{
@@ -1622,7 +1722,7 @@ async function slotSpin(){
   slot.grid=grid;
 
   if(S.animOn){
-    slotMsg('Spinning…');
+    slotMsg('Spinning…');SFX.diceRoll();
     const strips=[document.getElementById('strip0'),document.getElementById('strip1'),document.getElementById('strip2')];
     strips.forEach(s=>s.classList.add('spinning'));
     // stop reels one by one
@@ -1630,6 +1730,7 @@ async function slotSpin(){
       await wait(420+r*260);
       strips[r].classList.remove('spinning');
       setStrip(r,[grid[r][0],grid[r][1],grid[r][2]]);
+      SFX.reelStop();
     }
     await wait(150);
   }else{
@@ -1647,9 +1748,12 @@ async function slotSpin(){
     const name=(best.count===2?'Two ':'Three ')+slotLabel(best.sym);
     slotMsg(`${name}! ${hits.length>1?hits.length+' lines · ':''}+${fmt(total)}`,'win');
     flash('+'+fmt(total),'var(--win)');
+    // triple sevens (or any 3-of-a-kind seven line) = jackpot fanfare
+    const jackpot=hits.some(hh=>hh.sym==='seven'&&hh.count===3);
+    (jackpot?SFX.jackpot:SFX.win)();
   }else{
     S.casino+=cost;refreshMoney(); // stake lost to house
-    slotMsg('No win — spin again.','lose');
+    slotMsg('No win — spin again.','lose');SFX.lose();
   }
   slot.spinning=false;
   document.getElementById('slotSpin').disabled=false;document.getElementById('slotMax').disabled=false;
