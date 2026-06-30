@@ -335,7 +335,7 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
     <div class="btn-row">
       <button class="btn" id="crapsRoll">Roll Dice</button>
     </div>
-    <div class="hint">Come-out: Pass wins on 7/11, loses on 2/3/12. After a point sets, Pass wins if the point repeats before a 7. Hardways need both dice equal.</div>
+    <div class="hint">Your bets stay on the table and ride to the next roll automatically — hit <b>Clear</b> to take them all down and bet fresh. Come-out: Pass wins on 7/11, loses on 2/3/12. After a point sets, Pass wins if the point repeats before a 7. Hardways need both dice equal.</div>
   </section>
 
   <!-- ============ BLACKJACK ============ -->
@@ -666,8 +666,10 @@ document.querySelectorAll('#craps [data-bet]').forEach(cell=>{
   };
 });
 document.getElementById('crapsClear').onclick=()=>{
-  let refund=0;for(const k in cr.bets){if(cr.point&&(k==='pass'||k==='dont'))continue;refund+=cr.bets[k];delete cr.bets[k];}
-  returnStake(refund);renderCrapsStakes();crapsMsg(refund?('Cleared, '+fmt(refund)+' back.'):'Nothing to clear.');
+  if(cr.phase==='rolling')return;
+  let refund=0;for(const k in cr.bets){refund+=cr.bets[k];delete cr.bets[k];}
+  returnStake(refund);renderCrapsStakes();
+  crapsMsg(refund?('Table cleared — '+fmt(refund)+' back. Place new bets.'):'Nothing to clear.');
 };
 function crapsMsg(t,c){const m=document.getElementById('crapsMsg');m.textContent=t;m.className='msg'+(c?' '+c:'');}
 function totalBets(){return Object.values(cr.bets).reduce((a,b)=>a+b,0);}
@@ -714,10 +716,11 @@ function outcomeGoodForPlayer(sum,a,b){
 function desiredOutcome(){return null;}
 
 document.getElementById('crapsRoll').onclick=async ()=>{
+  if(cr.phase==='rolling')return;
   if(totalBets()===0){crapsMsg('Place at least one bet first.','lose');return;}
   const c1=document.getElementById('cube1'),c2=document.getElementById('cube2');
   const btn=document.getElementById('crapsRoll');
-  btn.disabled=true;
+  cr.phase='rolling';btn.disabled=true;
   const [r1,r2]=rollDicePair();
   if(S.animOn){
     crapsMsg('Rolling…');
@@ -730,63 +733,88 @@ document.getElementById('crapsRoll').onclick=async ()=>{
     setCubeFace(c1,r1);setCubeFace(c2,r2);
   }
   resolveCraps(r1,r2,r1+r2);
-  btn.disabled=false;
+  cr.phase='';btn.disabled=false;
 };
 function resolveCraps(r1,r2,sum){
   const b=cr.bets;let credit=0,resolvedStake=0,notes=[];const hard=r1===r2;
+  // Bets that resolved this roll and should STAY on the table (re-staked for next roll).
+  // We collect {key, amount} and re-fund them from the bank after settlement.
+  const keepWorking={};
+
+  // ---- one-roll bets (resolve every roll) ----
   if(b.field){const s=b.field;resolvedStake+=s;
     if(sum===2||sum===12){credit+=s*3;notes.push('Field '+sum+' 2:1');}
     else if([3,4,9,10,11].includes(sum)){credit+=s*2;notes.push('Field even');}
-    else notes.push('Field loses');delete b.field;}
-  if(b.any7){const s=b.any7;resolvedStake+=s;if(sum===7){credit+=s*5;notes.push('Any 7 4:1');}else notes.push('Any 7 loses');delete b.any7;}
-  if(b.craps){const s=b.craps;resolvedStake+=s;if([2,3,12].includes(sum)){credit+=s*8;notes.push('Any Craps 7:1');}else notes.push('Any Craps loses');delete b.craps;}
-  if(b.eleven){const s=b.eleven;resolvedStake+=s;if(sum===11){credit+=s*16;notes.push('Yo 15:1');}else notes.push('Yo loses');delete b.eleven;}
-  if(b.hard6){const s=b.hard6;if(sum===6&&hard){credit+=s*10;resolvedStake+=s;notes.push('Hard 6 9:1');delete b.hard6;}else if(sum===6||sum===7){resolvedStake+=s;notes.push('Hard 6 loses');delete b.hard6;}}
-  if(b.hard8){const s=b.hard8;if(sum===8&&hard){credit+=s*10;resolvedStake+=s;notes.push('Hard 8 9:1');delete b.hard8;}else if(sum===8||sum===7){resolvedStake+=s;notes.push('Hard 8 loses');delete b.hard8;}}
-  if(b.hard10){const s=b.hard10;if(sum===10&&hard){credit+=s*8;resolvedStake+=s;notes.push('Hard 10 7:1');delete b.hard10;}else if(sum===10||sum===7){resolvedStake+=s;notes.push('Hard 10 loses');delete b.hard10;}}
+    else notes.push('Field loses');
+    keepWorking.field=s;}
+  if(b.any7){const s=b.any7;resolvedStake+=s;if(sum===7){credit+=s*5;notes.push('Any 7 4:1');}else notes.push('Any 7 loses');keepWorking.any7=s;}
+  if(b.craps){const s=b.craps;resolvedStake+=s;if([2,3,12].includes(sum)){credit+=s*8;notes.push('Any Craps 7:1');}else notes.push('Any Craps loses');keepWorking.craps=s;}
+  if(b.eleven){const s=b.eleven;resolvedStake+=s;if(sum===11){credit+=s*16;notes.push('Yo 15:1');}else notes.push('Yo loses');keepWorking.eleven=s;}
 
+  // ---- hardways (multi-roll: only resolve on their number or a 7) ----
+  if(b.hard6){const s=b.hard6;
+    if(sum===6&&hard){credit+=s*10;resolvedStake+=s;notes.push('Hard 6 9:1');keepWorking.hard6=s;}
+    else if(sum===6||sum===7){resolvedStake+=s;notes.push('Hard 6 loses');keepWorking.hard6=s;}}
+  if(b.hard8){const s=b.hard8;
+    if(sum===8&&hard){credit+=s*10;resolvedStake+=s;notes.push('Hard 8 9:1');keepWorking.hard8=s;}
+    else if(sum===8||sum===7){resolvedStake+=s;notes.push('Hard 8 loses');keepWorking.hard8=s;}}
+  if(b.hard10){const s=b.hard10;
+    if(sum===10&&hard){credit+=s*8;resolvedStake+=s;notes.push('Hard 10 7:1');keepWorking.hard10=s;}
+    else if(sum===10||sum===7){resolvedStake+=s;notes.push('Hard 10 loses');keepWorking.hard10=s;}}
+
+  // ---- Pass / Don't Pass ----
   if(!cr.point){
     if(sum===7||sum===11){
-      if(b.pass){credit+=b.pass*2;resolvedStake+=b.pass;notes.push('Pass wins');delete b.pass;}
-      if(b.dont){resolvedStake+=b.dont;notes.push("Don't loses");delete b.dont;}
+      if(b.pass){credit+=b.pass*2;resolvedStake+=b.pass;notes.push('Pass wins');keepWorking.pass=b.pass;}
+      if(b.dont){resolvedStake+=b.dont;notes.push("Don't loses");keepWorking.dont=b.dont;}
     }else if(sum===2||sum===3){
-      if(b.pass){resolvedStake+=b.pass;notes.push('Pass loses');delete b.pass;}
-      if(b.dont){credit+=b.dont*2;resolvedStake+=b.dont;notes.push("Don't wins");delete b.dont;}
+      if(b.pass){resolvedStake+=b.pass;notes.push('Pass loses');keepWorking.pass=b.pass;}
+      if(b.dont){credit+=b.dont*2;resolvedStake+=b.dont;notes.push("Don't wins");keepWorking.dont=b.dont;}
     }else if(sum===12){
-      if(b.pass){resolvedStake+=b.pass;notes.push('Pass loses');delete b.pass;}
-      if(b.dont){credit+=b.dont;notes.push("Don't push");delete b.dont;}
-    }else{cr.point=sum;notes.push('Point set: '+sum);}
+      if(b.pass){resolvedStake+=b.pass;notes.push('Pass loses');keepWorking.pass=b.pass;}
+      if(b.dont){credit+=b.dont;notes.push("Don't push");keepWorking.dont=b.dont;}
+    }else{cr.point=sum;notes.push('Point set: '+sum);}  // pass/dont stay up, not resolved
   }else{
     if(sum===cr.point){
-      if(b.pass){credit+=b.pass*2;resolvedStake+=b.pass;notes.push('Point made! Pass wins');delete b.pass;}
-      if(b.dont){resolvedStake+=b.dont;notes.push("Don't loses");delete b.dont;}
+      if(b.pass){credit+=b.pass*2;resolvedStake+=b.pass;notes.push('Point made! Pass wins');keepWorking.pass=b.pass;}
+      if(b.dont){resolvedStake+=b.dont;notes.push("Don't loses");keepWorking.dont=b.dont;}
       cr.point=0;
     }else if(sum===7){
-      if(b.pass){resolvedStake+=b.pass;notes.push('Seven out. Pass loses');delete b.pass;}
-      if(b.dont){credit+=b.dont*2;resolvedStake+=b.dont;notes.push("Don't wins");delete b.dont;}
-      cr.point=0;if(b.hard6){resolvedStake+=b.hard6;delete b.hard6;}if(b.hard8){resolvedStake+=b.hard8;delete b.hard8;}if(b.hard10){resolvedStake+=b.hard10;delete b.hard10;}
+      if(b.pass){resolvedStake+=b.pass;notes.push('Seven out. Pass loses');keepWorking.pass=b.pass;}
+      if(b.dont){credit+=b.dont*2;resolvedStake+=b.dont;notes.push("Don't wins");keepWorking.dont=b.dont;}
+      cr.point=0;
+      // a 7-out also resolves any working hardways as losses (if not already handled above)
+      if(b.hard6&&keepWorking.hard6===undefined){resolvedStake+=b.hard6;notes.push('Hard 6 loses');keepWorking.hard6=b.hard6;}
+      if(b.hard8&&keepWorking.hard8===undefined){resolvedStake+=b.hard8;notes.push('Hard 8 loses');keepWorking.hard8=b.hard8;}
+      if(b.hard10&&keepWorking.hard10===undefined){resolvedStake+=b.hard10;notes.push('Hard 10 loses');keepWorking.hard10=b.hard10;}
     }
   }
-  // credit returns stake+winnings to player and pulls winnings from house
-  const winnings=credit-(creditStakePortion(credit,resolvedStake));
-  // simpler: stake already left bank at placement. So:
-  // money returned to bank = credit. Of that, (credit - resolvedStake)>0 is house-paid winnings.
+
+  // ---- settle money: stakes already left the bank at placement ----
   if(credit>0){
     S.bank+=credit;
-    const houseDelta=credit-resolvedStake; // net flow from house
-    if(houseDelta>0){S.casino-=houseDelta;S.wonFromHouse+=houseDelta;}
-    else if(houseDelta<0){S.casino-=houseDelta;} // house keeps part (negative -> casino gains)
-    refreshMoney();
-  }else{
-    // all lost stakes go to house
-    if(resolvedStake>0){S.casino+=resolvedStake;refreshMoney();}
+    const houseDelta=credit-resolvedStake;
+    S.casino-=houseDelta; if(houseDelta>0)S.wonFromHouse+=houseDelta;
+  }else if(resolvedStake>0){
+    S.casino+=resolvedStake; // pure loss this roll
   }
+
+  // ---- KEEP BETS ON THE TABLE: re-stake every resolved bet from the bank ----
+  let couldNotKeep=[];
+  for(const k in keepWorking){
+    const amt=keepWorking[k];
+    if(S.bank>=amt){ S.bank-=amt; /* bet stays at same amount, already in cr.bets[k] */ }
+    else { delete cr.bets[k]; couldNotKeep.push(k); }
+  }
+  refreshMoney();
+
   const net=credit-resolvedStake;
   renderCrapsStakes();updatePoint();
-  crapsMsg('Rolled '+sum+' ('+r1+'+'+r2+'). '+(notes.join(' · ')||'No resolution.'),net>0?'win':(net<0?'lose':''));
+  let msg='Rolled '+sum+' ('+r1+'+'+r2+'). '+(notes.join(' · ')||'No resolution.');
+  if(couldNotKeep.length) msg+='  (Not enough to re-bet: '+couldNotKeep.join(', ')+')';
+  crapsMsg(msg,net>0?'win':(net<0?'lose':''));
   if(net>0)flash('+'+fmt(net),'var(--win)');else if(net<0)flash(fmt(net),'var(--lose)');
 }
-function creditStakePortion(){return 0;}
 buildCube(document.getElementById('cube1'));buildCube(document.getElementById('cube2'));
 setCubeFace(document.getElementById('cube1'),5);setCubeFace(document.getElementById('cube2'),4);
 updatePoint();renderCrapsStakes();
