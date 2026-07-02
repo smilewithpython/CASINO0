@@ -118,11 +118,11 @@ main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;position:relative;
   box-shadow:0 3px 6px rgba(0,0,0,.4);transition:.1s;font-family:system-ui;}
 .chip:active{transform:scale(.9);}
 .chip.sel{border-style:solid;border-color:var(--brass-bright);box-shadow:0 0 12px var(--brass-bright),0 3px 6px rgba(0,0,0,.4);}
-.chip[data-v="5"]{background:radial-gradient(circle,#d94343,#a82020);}
-.chip[data-v="25"]{background:radial-gradient(circle,#3a8f5f,#1d6b3f);}
-.chip[data-v="100"]{background:radial-gradient(circle,#3a3a3a,#111);}
-.chip[data-v="500"]{background:radial-gradient(circle,#9b59b6,#6b2f86);}
-.chip[data-v="1000"]{background:radial-gradient(circle,#d4a020,#9a7010);color:#1a1a1a;}
+.chip.c1{background:radial-gradient(circle,#d94343,#a82020);}
+.chip.c2{background:radial-gradient(circle,#3a8f5f,#1d6b3f);}
+.chip.c3{background:radial-gradient(circle,#3a3a3a,#111);}
+.chip.c4{background:radial-gradient(circle,#9b59b6,#6b2f86);}
+.chip[data-v="1000"]{color:#1a1a1a;}
 .chip.clear{background:radial-gradient(circle,#555,#333);border-style:solid;font-size:10px;}
 
 /* ===== CRAPS TABLE (redesigned) ===== */
@@ -233,6 +233,12 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;heigh
 input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
   background:var(--brass-bright);border:2px solid #fff;cursor:pointer;}
 .scale-marks{display:flex;justify-content:space-between;font-size:9px;color:var(--bone-dim);margin-top:5px;padding:0 2px;}
+.tier-select{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:2px;}
+.tier-select button{background:rgba(0,0,0,.3);border:1.5px solid var(--felt-line);color:var(--bone);
+  border-radius:9px;padding:9px 4px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:system-ui;}
+.tier-select button.sel{border-color:var(--brass-bright);background:rgba(201,162,75,.18);color:var(--brass-bright);
+  box-shadow:0 0 10px rgba(201,162,75,.2);}
+.tier-select button:disabled{opacity:.4;cursor:not-allowed;}
 .setting-row{display:flex;justify-content:space-between;align-items:center;padding:11px 2px;border-top:1px solid rgba(255,255,255,.08);}
 .setting-row .sr-lbl{font-size:13px;}
 .setting-row .sr-sub{font-size:10px;color:var(--bone-dim);}
@@ -278,6 +284,7 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
   z-index:150;background:linear-gradient(180deg,#1d5a40,#103a2a);border:1.5px solid var(--brass);
   border-radius:14px;padding:11px 12px;display:flex;align-items:center;justify-content:space-between;
   gap:10px;box-shadow:0 6px 24px rgba(0,0,0,.55);animation:ibUp .35s ease-out;}
+.install-bar.tier-nudge{background:linear-gradient(180deg,#5a3a10,#2e1d08);border-color:var(--brass-bright);}
 @keyframes ibUp{from{transform:translateY(20px);opacity:0;}to{transform:none;opacity:1;}}
 .ib-text{display:flex;flex-direction:column;line-height:1.3;min-width:0;}
 .ib-text b{color:var(--brass-bright);font-family:Georgia,serif;font-size:15px;}
@@ -424,6 +431,15 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
   <div class="ib-actions">
     <button class="ib-btn" id="installBtn">Install</button>
     <button class="ib-x" id="installDismiss">✕</button>
+  </div>
+</div>
+
+<!-- Chip tier upgrade nudge -->
+<div id="tierNudge" class="install-bar tier-nudge" style="display:none;">
+  <div class="ib-text"><b>🎰 Bigger chips available</b><span id="tierNudgeText">You've won big — unlock higher chips?</span></div>
+  <div class="ib-actions">
+    <button class="ib-btn" id="tierNudgeYes">Upgrade</button>
+    <button class="ib-x" id="tierNudgeNo">✕</button>
   </div>
 </div>
 
@@ -735,6 +751,14 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
       <div><div class="sr-lbl">🔊 Sound effects</div><div class="sr-sub">Chip clinks, win chimes, dice &amp; reels. Turn off to mute.</div></div>
       <div class="toggle on" id="soundToggle"><div class="knob"></div></div>
     </div>
+
+    <div class="luck-block" style="margin-top:12px;">
+      <div class="luck-head"><span class="lg serif">🪙 Chip Tier</span><span class="lv" id="chipTierLabel">Rookie</span></div>
+      <div class="luck-desc">Re-denominates every chip in every game at once — no more clicking $500 fifty times. Pick the ladder that matches your bankroll.</div>
+      <div class="tier-select" id="tierSelect"></div>
+      <div class="luck-desc" id="tierPreview" style="margin-top:8px;"></div>
+    </div>
+
     <div class="setting-row">
       <div><div class="sr-lbl">House bankroll</div><div class="sr-sub">What you're playing against</div></div>
       <input class="in-amt" id="casinoInput" value="4000000000000">
@@ -770,7 +794,7 @@ const SAVE_KEY='feltbone_v2';
 let S={
   bank:1000, casino:4000000000000,
   luckOn:true, luck:{craps:5,blackjack:5,poker:5,slots:5,roulette:5},
-  animOn:true, soundOn:true,
+  animOn:true, soundOn:true, chipTier:0,
   dealersBusted:0, wonFromHouse:0,
   dealerIdx:0, dealerWinsVsYou:0
 };
@@ -874,6 +898,7 @@ function refreshMoney(){
   document.getElementById('statWon').textContent=fmtBig(S.wonFromHouse);
   document.getElementById('statDealers').textContent=S.dealersBusted;
   save();
+  if(typeof maybeSuggestTier==='function') maybeSuggestTier();
 }
 // player wins money FROM the house; player loses money TO the house
 function playerWins(amount){ S.bank+=amount; S.casino-=amount; S.wonFromHouse+=amount; refreshMoney(); }
@@ -884,6 +909,83 @@ function returnStake(amount){ S.bank+=amount; refreshMoney(); } // unused stake 
 const flashEl=document.getElementById('flash');
 function flash(t,c){flashEl.textContent=t;flashEl.style.color=c||'var(--brass-bright)';
   flashEl.classList.remove('show');void flashEl.offsetWidth;flashEl.classList.add('show');}
+
+/* ============================================================
+   CHIP TIERS — one control re-denominates every chip row in
+   every game at once, so growing your bankroll doesn't mean
+   clicking a $500 chip fifty times.
+   Each tier is a 4-value ladder; games with only 3 chip slots
+   (poker) just use the first three values.
+   ============================================================ */
+const CHIP_TIERS=[
+  {name:'Rookie',     values:[5,25,100,500]},
+  {name:'Player',     values:[25,100,500,2500]},
+  {name:'High Roller',values:[100,500,2500,10000]},
+  {name:'VIP',        values:[1000,5000,25000,100000]},
+  {name:'Whale',      values:[10000,50000,250000,1000000]},
+  {name:'Legend',     values:[100000,500000,2500000,10000000]},
+];
+// visual color per slot index (red/green/dark/purple/gold) stays consistent regardless of value
+const CHIP_COLORS=['c1','c2','c3','c4'];
+function fmtChipLabel(v){
+  if(v>=1000000)return (v/1000000)+'M';
+  if(v>=1000)return (v/1000)+'K';
+  return String(v);
+}
+// Every chip row in the app, by container id, with how many denomination slots it uses (3 or 4)
+const CHIP_ROWS=[
+  {sel:'#crapsChips .chip[data-v]', n:4},
+  {sel:'#blackjack .chip[data-v]',  n:4},
+  {sel:'#poker .chip[data-v]',      n:3},
+  {sel:'#slotChips .chip[data-v]',  n:4},
+  {sel:'#rlChips .chip[data-v]',    n:4},
+];
+function applyChipTier(tierIdx,silent){
+  S.chipTier=Math.max(0,Math.min(CHIP_TIERS.length-1,tierIdx));
+  const tier=CHIP_TIERS[S.chipTier];
+  CHIP_ROWS.forEach(row=>{
+    const chips=document.querySelectorAll(row.sel);
+    chips.forEach((c,i)=>{
+      if(i>=row.n)return;
+      const v=tier.values[i];
+      c.dataset.v=v;
+      c.textContent=fmtChipLabel(v);
+      CHIP_COLORS.forEach(cc=>c.classList.remove(cc));
+      c.classList.add(CHIP_COLORS[i]);
+    });
+  });
+  // reset any in-progress "selected chip" trackers to the new smallest denomination
+  if(typeof cr!=='undefined'){cr.chip=tier.values[0];}
+  if(typeof slot!=='undefined'){slot.perLine=tier.values[0];updateSlotBet&&updateSlotBet();}
+  if(typeof rl!=='undefined'){rl.chip=tier.values[0];}
+  document.querySelectorAll('.chip[data-v]').forEach(c=>c.classList.remove('sel'));
+  document.querySelectorAll('.chip[data-v]').forEach(c=>{ if(+c.dataset.v===tier.values[0]) c.classList.add('sel'); });
+  const disp=document.getElementById('chipTierLabel');if(disp)disp.textContent=tier.name;
+  save();
+  if(!silent) flash(tier.name+' chips','var(--brass-bright)');
+}
+// suggest a tier bump once per threshold crossing (not nagging every hand)
+const TIER_SUGGEST_AT=[5000,50000,500000,5000000,50000000]; // lifetime won thresholds -> tier index+1
+function maybeSuggestTier(){
+  if(S._tierSuggested===undefined)S._tierSuggested=0;
+  for(let i=0;i<TIER_SUGGEST_AT.length;i++){
+    if(S.wonFromHouse>=TIER_SUGGEST_AT[i] && S.chipTier<=i && S._tierSuggested<=i){
+      S._tierSuggested=i+1;save();
+      const nextTier=CHIP_TIERS[i+1];
+      if(nextTier){
+        showTierNudge(nextTier.name,i+1);
+      }
+      break;
+    }
+  }
+}
+function showTierNudge(name,idx){
+  const bar=document.getElementById('tierNudge');
+  if(!bar)return;
+  document.getElementById('tierNudgeText').textContent=`You've won big — unlock ${name} chips?`;
+  bar.dataset.target=idx;
+  bar.style.display='flex';
+}
 
 /* ============================================================
    LUCK ENGINE
@@ -958,10 +1060,27 @@ document.getElementById('casinoInput').onchange=e=>{const v=parseFloat(e.target.
 document.getElementById('bankInput').onchange=e=>{const v=parseFloat(e.target.value.replace(/[^0-9.]/g,''));
   if(!isNaN(v)){S.bank=v;refreshMoney();}};
 
+function buildTierSelect(){
+  const wrap=document.getElementById('tierSelect');
+  if(!wrap || wrap.children.length)return; // build once
+  CHIP_TIERS.forEach((t,i)=>{
+    const b=document.createElement('button');
+    b.textContent=t.name;b.dataset.idx=i;
+    b.onclick=()=>{applyChipTier(i);syncTierUI();};
+    wrap.appendChild(b);
+  });
+}
+function syncTierUI(){
+  document.querySelectorAll('#tierSelect button').forEach(b=>b.classList.toggle('sel',+b.dataset.idx===S.chipTier));
+  document.getElementById('chipTierLabel').textContent=CHIP_TIERS[S.chipTier].name;
+  const t=CHIP_TIERS[S.chipTier];
+  document.getElementById('tierPreview').textContent='Chips: '+t.values.map(fmtChipLabel).join(' / ');
+}
 function syncSettings(){
   document.getElementById('casinoInput').value=Math.round(S.casino);
   document.getElementById('bankInput').value=Math.round(S.bank);
   document.getElementById('statDealer').textContent=DEALERS[S.dealerIdx].name.replace('Dealer ','');
+  buildTierSelect();syncTierUI();
   syncToggle();syncAnim();syncSound();refreshMoney();
 }
 document.getElementById('installFromSettings').onclick=()=>{
@@ -974,7 +1093,7 @@ document.getElementById('installFromSettings').onclick=()=>{
 };
 document.getElementById('resetAll').onclick=()=>{
   if(confirm('Reset bankrolls, luck, and dealers to default?')){
-    S={bank:1000,casino:4000000000000,luckOn:true,luck:{craps:5,blackjack:5,poker:5,slots:5,roulette:5},animOn:true,soundOn:true,
+    S={bank:1000,casino:4000000000000,luckOn:true,luck:{craps:5,blackjack:5,poker:5,slots:5,roulette:5},animOn:true,soundOn:true,chipTier:0,
        dealersBusted:0,wonFromHouse:0,dealerIdx:0,dealerWinsVsYou:0};
     save();location.reload();
   }
@@ -2132,7 +2251,17 @@ function betName(b){
 }
 updateRlTotal();
 
+/* apply the saved (or default Rookie) chip tier to every chip row on load */
+applyChipTier(S.chipTier||0, true);
 
+/* tier-upgrade nudge banner wiring */
+document.getElementById('tierNudgeYes').onclick=()=>{
+  const bar=document.getElementById('tierNudge');
+  const idx=+bar.dataset.target;
+  applyChipTier(idx);syncTierUI&&syncTierUI();
+  bar.style.display='none';
+};
+document.getElementById('tierNudgeNo').onclick=()=>{document.getElementById('tierNudge').style.display='none';};
 
 /* init */
 refreshMoney();
